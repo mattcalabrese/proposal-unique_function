@@ -1230,7 +1230,7 @@ Possible extra rowspan handling
   <meta content="Bikeshed version e9290f0f6bc01459c8b7bdfa2bb91f6985fc5c67" name="generator">
   <link href="http://wg21.link/p0228r3" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="56ab47f4cd8a8124b9e1db23112e7cadde331ca1" name="document-revision">
+  <meta content="fbab52111b20949fbc7eb3566f833edcb6679896" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1471,7 +1471,7 @@ pre .property::before, pre .property::after {
     <li><a href="#Changes"><span class="secno">3</span> <span class="content">Summary of Changes</span></a>
     <li><a href="#Impl"><span class="secno">4</span> <span class="content">Implementation Experience</span></a>
     <li><a href="#Polls"><span class="secno">5</span> <span class="content">Suggested Polls</span></a>
-    <li><a href="#References"><span class="secno">6</span> <span class="content">Refernces</span></a>
+    <li><a href="#References"><span class="secno">6</span> <span class="content">References</span></a>
    </ol>
   </nav>
   <main>
@@ -1492,7 +1492,7 @@ with the exceptions of the following:</p>
     <li data-md>
      <p>It is move-only.</p>
     <li data-md>
-     <p>It does not have the const-correctness bug detailed in n4348.[4]</p>
+     <p>It does not have the const-correctness bug of <code class="highlight"><c- n>std</c-><c- o>::</c-><c- n>function</c-></code> detailed in n4348.[4]</p>
     <li data-md>
      <p>It provides minimal support for cv/ref qualified function types.</p>
     <li data-md>
@@ -1583,14 +1583,16 @@ issues of std::function).
      <em>Returns:</em> 
      <tt>
       INVOKE&lt;R>(
-      <ins>static_cast&lt;remove_cvref_t&lt;decltype(f)> QUAL_OPT_REF>(</ins>
+      <ins>static_cast&lt;decay_t&lt;F> QUAL_OPT_REF>(</ins>
       f
       <ins>)</ins>
       ,
     std​::​forward&lt;ArgTypes>(args)...)
      </tt>
-      ([func.require]), where f is the unqualified
-    target object of *this.
+      , where f is the unqualified
+    target object of 
+     <tt>*this</tt>
+     .
     </p>
     <p>
      <em>Throws:</em> 
@@ -1630,7 +1632,10 @@ correct kind of Callable:</p>
    <blockquote>
 <pre>template&lt;class F> unique_function&amp; operator=(F&amp;&amp; f);
 </pre>
-    <p><em>Effects:</em> As if by: unique_function(std​::​forward&lt;F>(f)).swap(*this);</p>
+    <p>
+     <em>Effects:</em> As if by: 
+     <tt>unique_function(std​::​forward&lt;F>(f)).swap(*this);</tt>
+    </p>
     <p><em>Returns:</em> *this.</p>
     <p>
      <em>Remarks:</em> This assignment operator shall not participate in overload
@@ -1682,7 +1687,7 @@ llvm.</p>
    <p>Proposal with a more complete set of cv/ref specializations?</p>
    <p>If consensus on any of the above, bring to LWG in Kona without seeing in LEWG again?</p>
    <p>Name bikeshedding.</p>
-   <h2 class="heading settled" data-level="6" id="References"><span class="secno">6. </span><span class="content">Refernces</span><a class="self-link" href="#References"></a></h2>
+   <h2 class="heading settled" data-level="6" id="References"><span class="secno">6. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
    <p>[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a></p>
    <p>[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a></p>
    <p>[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a></p>

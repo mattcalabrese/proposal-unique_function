@@ -34,7 +34,7 @@ This conservative <code>unique_function</code> is intended to be the same as <co
 with the exceptions of the following:
 
 1. It is move-only.
-2. It does not have the const-correctness bug detailed in n4348.[4]
+2. It does not have the const-correctness bug of <code>std::function</code> detailed in n4348.[4]
 3. It provides minimal support for cv/ref qualified function types.
 4. It does not have the <code>target_type</code> accessor (requested by users and implementors).
 
@@ -128,9 +128,9 @@ In [func.wrap.func.inv]
 <pre nohighlight>
 R operator()(ArgTypes... args)<del>const</del> <ins>QUAL_OPT</ins>;
 </pre>
-<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;remove_cvref_t&lt;decltype(f)&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
-    std​::​forward&lt;ArgTypes&gt;(args)...)</tt> ([func.require]), where f is the unqualified
-    target object of *this.
+<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;decay_t&lt;F&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
+    std​::​forward&lt;ArgTypes&gt;(args)...)</tt> , where f is the unqualified
+    target object of <tt>*this</tt>.
 
 <em>Throws:</em> <tt>bad_­function_­call</tt> if <tt>!*this</tt>; otherwise, any exception thrown by the
     wrapped callable object.
@@ -157,7 +157,7 @@ Do the same for the converting assignment:
 <pre nohighlight>
 template&lt;class F&gt; unique_function& operator=(F&& f);
 </pre>
-<em>Effects:</em> As if by: unique_function(std​::​forward&lt;F&gt;(f)).swap(*this);
+<em>Effects:</em> As if by: <tt>unique_function(std​::​forward&lt;F&gt;(f)).swap(*this);</tt>
 
 <em>Returns:</em> *this.
 
@@ -204,8 +204,8 @@ If consensus on any of the above, bring to LWG in Kona without seeing in LEWG ag
 
 Name bikeshedding.
 
-Refernces {#References}
-=======================
+References {#References}
+========================
 
 [1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a>
 
