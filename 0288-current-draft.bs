@@ -186,9 +186,8 @@ design that is similar to this. What is presented is a conservative subset of
 those implementations.
 
 Previous revisions of this paper have included publicly accessible move-only
-function implementations, notably including implementations in HPX, folly, and
-llvm.
-
+function implementations, notably including implementations in HPX, Folly, and
+LLVM.
 
 Suggested Polls {#Polls}
 ========================
