@@ -1,0 +1,218 @@
+<pre class='metadata'>
+Title: unique_function
+Shortname: D0228
+Revision: 3
+Status: D
+Audience: LEWG
+Group: WG21
+URL: http://wg21.link/p0228r3
+Editor: Ryan McDougall <mcdougall.ryan@gmail.com>
+        Matt Calabrese <metaprogrammingtheworld@gmail.com>
+Abstract: This paper proposes a conservative, move-only equivalent of <code>std::function</code>.
+Date: 2018-11-09
+</pre>
+
+Brief History {#History}
+========================
+
+This paper started as a proposal by David Krauss, N4543[1], from 2015 and there has
+been an open issue in the LEWG bugzilla requesting such a facility since 2014[2].
+
+Since then, the paper has gone through 4 revisions and has been considered in
+small groups in LEWG multiple times. Gradual feedback has led to the conservative
+proposal seen here. The most-recent draft prior to this was a late-paper written
+and presented by Ryan McDougall in LEWGI in San Diego[3]. It included multiple
+references to implementations of move-only functions and made a strong case for
+the importance of a move-only form of <code>std::function</code>.
+
+Feebdack given was encouragement for targetting C++20.
+
+Overview {#Overview}
+====================
+
+This conservative <code>unique_function</code> is intended to be the same as <code>std::function</code>,
+with the exceptions of the following:
+
+1. It is move-only.
+2. It does not have the const-correctness bug detailed in n4348.[4]
+3. It provides minimal support for cv/ref qualified function types.
+4. It does not have the <code>target_type</code> accessor (requested by users and implementors).
+
+Summary of Changes {#Changes}
+=============================
+
+The following is not formal wording. It is an explanation of how this template
+and its specializations would differ from the specification of <tt>std::function</tt>
+relative to the WP from the most recent mailing, N4778.[5]
+
+Add (for simplicity, class-definitions are not inlined here):
+
+[func.wrap.func]
+
+<pre>
+template&lt;class Sig&gt; class unique_function; // not defined
+
+template&lt;class R, class... ArgTypes&gt;
+  class unique_function&lt;R(ArgTypes...)&gt;;
+
+<ins>template&lt;class R, class... ArgTypes&gt;
+  class unique_function&lt;R(ArgTypes...) const&gt;;
+
+template&lt;class R, class... ArgTypes&gt;
+  class unique_function&lt;R(ArgTypes...)&amp;&amp;&gt;;</ins>
+</pre>
+
+In [func.wrap.func.con]
+
+Do not provide a copy constructor:
+
+<blockquote>
+<pre nohighlight>
+<del><tt>unique_function(const unique_function& f);</tt></del>
+</pre>
+</blockquote>
+
+Do not provide a copy-assigment operator: 
+
+<blockquote>
+<pre nohighlight>
+<del><tt>unique_function& operator=(const unique_function& f);</tt></del>
+</pre>
+</blockquote>
+
+In [func.wrap.func] specify the following wording for aid in describing the provided <tt>unique_function</tt>
+partial specializations.
+
+<blockquote>
+<pre nohighlight>
+Let QUAL_OPT be an exposition-only macro defined to be a textual representation
+of the qualifiers of the function type parameter of <tt>unique_function</tt>.
+
+[<em>Note:</em>
+  For unique_function&lt;void() const&gt;
+    - QUAL_OPT is const
+    
+  For unique_function&lt;void() &amp;&amp;&gt;
+    - QUAL_OPT is &&
+
+  For unique_function&lt;void()&gt;
+    - QUAL_OPT is
+]
+
+Let QUAL_OPT_REF be an exposition-only macro defined in the following manner:
+    - If the function type parameter of <tt>unique_function</tt> is reference
+      qualified, let QUAL_OPT_REF be defined as QUAL_OPT.
+
+    - Otherwise, let QUAL_OPT_REF be defined as QUAL_OPT&.
+
+[<em>Note:</em>
+  For unique_function&lt;void() const&gt;
+    - QUAL_OPT_REF is const&
+
+  For unique_function&lt;void() &amp;&amp;&gt;
+    - QUAL_OPT_REF is &&
+
+  For unique_function&lt;void()&gt;
+    - QUAL_OPT_REF is &
+]
+</pre>
+</blockquote>
+
+Update the function signature of <tt>operator()</tt> to match the template
+parameter exactly, and invoke the contained Callable with the correct cv
+qualification and value category (this prevents duplicating the const-correctness
+issues of std::function).
+
+In [func.wrap.func.inv]
+<blockquote>
+<pre nohighlight>
+R operator()(ArgTypes... args)<del>const</del> <ins>QUAL_OPT</ins>;
+</pre>
+<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;remove_cvref_t&lt;decltype(f)&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
+    std​::​forward&lt;ArgTypes&gt;(args)...)</tt> ([func.require]), where f is the unqualified
+    target object of *this.
+
+<em>Throws:</em> <tt>bad_­function_­call</tt> if <tt>!*this</tt>; otherwise, any exception thrown by the
+    wrapped callable object.
+</blockquote>
+
+In [func.wrap.func.con] regarding the constructor taking a Callable, have a
+movability requirement instead of a copyability requirement and also require the
+correct kind of Callable:
+
+<blockquote>
+<pre nohighlight>
+    template&lt;class F&gt; unique_function(F f)
+</pre>
+    <em>Requires:</em> F shall be <del>Cpp17CopyConstructible </del><ins>Cpp17MoveConstructible</ins>
+
+    <em>Remarks:</em> This constructor shall not participate in overload resolution unless
+    <tt>decay_­t&lt;F&gt; <ins>QUAL_OPT_REF </ins></tt> is <del>Lvalue-</del>Callable for
+    argument types <tt>ArgTypes...</tt> and return type <tt>R</tt>.
+</blockquote>
+
+Do the same for the converting assignment:
+
+<blockquote>
+<pre nohighlight>
+template&lt;class F&gt; unique_function& operator=(F&& f);
+</pre>
+<em>Effects:</em> As if by: unique_function(std​::​forward&lt;F&gt;(f)).swap(*this);
+
+<em>Returns:</em> *this.
+
+<em>Remarks:</em> This assignment operator shall not participate in overload
+    resolution unless <tt>decay_­t&lt;F&gt;<ins> QUAL_OPT_REF</ins></tt> is <del>Lvalue-</del>Callable for
+    argument types <tt>ArgTypes...</tt> and return type <tt>R</tt>.
+</blockquote>
+
+Additionally, we suggest not including <tt>target_type</tt>, while being open to
+the possibility of proposing it for C++23:
+
+<blockquote>
+<pre nohighlight><del>
+const type_info& target_type() const noexcept;
+</del></pre>
+</blockquote>
+
+Implementation Experience {#Impl}
+=================================
+
+There are many implementations of a move-only <tt>std::function</tt> with a
+design that is similar to this. What is presented is a conservative subset of
+those implementations.
+
+Previous revisions of this paper have included publicly accessible move-only
+function implementations, notably including implementations in HPX, folly, and
+llvm.
+
+
+Suggested Polls {#Polls}
+========================
+
+Proposal as-is?
+
+Proposal with <tt>target_type</tt> *not* removed?
+
+Proposal without the && specialization?
+
+Proposal without the const specialization (no way to invoke a <code>const unique_function&lt;void()&gt;</code>).
+
+Proposal with a more complete set of cv/ref specializations?
+
+If consensus on any of the above, bring to LWG in Kona without seeing in LEWG again?
+
+Name bikeshedding.
+
+Refernces {#References}
+=======================
+
+[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a>
+
+[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a>
+
+[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a>
+
+[4]: Geoffrey Romer: N4348 "Making std::function safe for concurrency" <a href="www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html">www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html</a>
+
+[5]: Richard Smith: N4778 "Working Draft, Standard for Programming Language C++" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/n4778.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/n4778.pdf</a>
