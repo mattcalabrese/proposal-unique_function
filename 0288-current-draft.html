@@ -1230,7 +1230,7 @@ Possible extra rowspan handling
   <meta content="Bikeshed version e9290f0f6bc01459c8b7bdfa2bb91f6985fc5c67" name="generator">
   <link href="http://wg21.link/p0228r3" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="fbab52111b20949fbc7eb3566f833edcb6679896" name="document-revision">
+  <meta content="a7df5915ca4fc3701583622969aeae55ec3b2c3e" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1583,7 +1583,7 @@ issues of std::function).
      <em>Returns:</em> 
      <tt>
       INVOKE&lt;R>(
-      <ins>static_cast&lt;decay_t&lt;F> QUAL_OPT_REF>(</ins>
+      <ins>static_cast&lt;remove_cvref_t&lt;decltype(f)> QUAL_OPT_REF>(</ins>
       f
       <ins>)</ins>
       ,
@@ -1592,7 +1592,8 @@ issues of std::function).
       , where f is the unqualified
     target object of 
      <tt>*this</tt>
-     .
+     , 
+     <ins></ins>
     </p>
     <p>
      <em>Throws:</em> 

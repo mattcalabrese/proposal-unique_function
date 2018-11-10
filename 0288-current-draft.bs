@@ -128,9 +128,9 @@ In [func.wrap.func.inv]
 <pre nohighlight>
 R operator()(ArgTypes... args)<del>const</del> <ins>QUAL_OPT</ins>;
 </pre>
-<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;decay_t&lt;F&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
+<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;remove_cvref_t&lt;decltype(f)&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
     std​::​forward&lt;ArgTypes&gt;(args)...)</tt> , where f is the unqualified
-    target object of <tt>*this</tt>.
+    target object of <tt>*this</tt>, <ins></.
 
 <em>Throws:</em> <tt>bad_­function_­call</tt> if <tt>!*this</tt>; otherwise, any exception thrown by the
     wrapped callable object.
