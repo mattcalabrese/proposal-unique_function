@@ -1230,7 +1230,7 @@ Possible extra rowspan handling
   <meta content="Bikeshed version e9290f0f6bc01459c8b7bdfa2bb91f6985fc5c67" name="generator">
   <link href="http://wg21.link/p0228r3" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="a7df5915ca4fc3701583622969aeae55ec3b2c3e" name="document-revision">
+  <meta content="fd7ef6c92368d1c9d57f242c01e7e1d7296b0d01" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1496,7 +1496,7 @@ with the exceptions of the following:</p>
     <li data-md>
      <p>It provides minimal support for cv/ref qualified function types.</p>
     <li data-md>
-     <p>It does not have the <code class="highlight"><c- n>target_type</c-></code> accessor (requested by users and implementors).</p>
+     <p>It does not have the <code class="highlight"><c- n>target_type</c-></code> and <code class="highlight"><c- n>target</c-></code> accessors (direction requested by users and implementors).</p>
    </ol>
    <h2 class="heading settled" data-level="3" id="Changes"><span class="secno">3. </span><span class="content">Summary of Changes</span><a class="self-link" href="#Changes"></a></h2>
    <p>
@@ -1657,12 +1657,17 @@ correct kind of Callable:</p>
    </blockquote>
    <p>
     Additionally, we suggest not including 
+    <tt>target</tt>
+     and 
     <tt>target_type</tt>
     , while being open to
 the possibility of proposing it for C++23:
    </p>
    <blockquote>
 <pre><del>const type_info&amp; target_type() const noexcept;
+
+template&lt;class T> T* target() noexcept;
+template&lt;class T> const T* target() const noexcept;
 </del></pre>
    </blockquote>
    <h2 class="heading settled" data-level="4" id="Impl"><span class="secno">4. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
@@ -1680,6 +1685,8 @@ llvm.</p>
    <p>Proposal as-is?</p>
    <p>
     Proposal with 
+    <tt>target</tt>
+     and 
     <tt>target_type</tt>
      *not* removed?
    </p>

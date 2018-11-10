@@ -36,7 +36,7 @@ with the exceptions of the following:
 1. It is move-only.
 2. It does not have the const-correctness bug of <code>std::function</code> detailed in n4348.[4]
 3. It provides minimal support for cv/ref qualified function types.
-4. It does not have the <code>target_type</code> accessor (requested by users and implementors).
+4. It does not have the <code>target_type</code> and <code>target</code> accessors (direction requested by users and implementors).
 
 Summary of Changes {#Changes}
 =============================
@@ -166,12 +166,15 @@ template&lt;class F&gt; unique_function& operator=(F&& f);
     argument types <tt>ArgTypes...</tt> and return type <tt>R</tt>.
 </blockquote>
 
-Additionally, we suggest not including <tt>target_type</tt>, while being open to
+Additionally, we suggest not including <tt>target</tt> and <tt>target_type</tt>, while being open to
 the possibility of proposing it for C++23:
 
 <blockquote>
 <pre nohighlight><del>
 const type_info& target_type() const noexcept;
+
+template&lt;class T&gt; T* target() noexcept;
+template&lt;class T&gt; const T* target() const noexcept;
 </del></pre>
 </blockquote>
 
@@ -192,7 +195,7 @@ Suggested Polls {#Polls}
 
 Proposal as-is?
 
-Proposal with <tt>target_type</tt> *not* removed?
+Proposal with <tt>target</tt> and <tt>target_type</tt> *not* removed?
 
 Proposal without the && specialization?
 
