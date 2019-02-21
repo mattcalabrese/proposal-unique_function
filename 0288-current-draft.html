@@ -1228,7 +1228,7 @@ Possible extra rowspan handling
     }
   </style>
   <meta content="Bikeshed version 1cff2db4ee2c3bba7a4077d3007528ec73b0485d" name="generator">
-  <link href="http://wg21.link/p0288r3" rel="canonical">
+  <link href="http://wg21.link/p0288r4" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
 <style>/* style-md-lists */
 
@@ -1443,7 +1443,7 @@ pre .property::before, pre .property::after {
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
-     <dd><a class="u-url" href="http://wg21.link/p0288r3">http://wg21.link/p0288r3</a>
+     <dd><a class="u-url" href="http://wg21.link/p0288r4">http://wg21.link/p0288r4</a>
      <dt>Authors:
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Ryan McDougall &lt;mcdougall.ryan@gmail.com></span>
@@ -1461,7 +1461,7 @@ pre .property::before, pre .property::after {
   <div class="p-summary" data-fill-with="abstract">
    <h2 class="no-num no-toc no-ref heading settled" id="abstract"><span class="content">Abstract</span></h2>
    <p>
-    This paper proposes a conservative, move-only equivalent of 
+    This paper proposes   a conservative, move-only equivalent of 
     <tt>std::function</tt>
     .
    </p>
@@ -1482,8 +1482,9 @@ pre .property::before, pre .property::after {
      </ol>
     <li><a href="#Changes"><span class="secno">4</span> <span class="content">Summary of Changes</span></a>
     <li><a href="#Impl"><span class="secno">5</span> <span class="content">Implementation Experience</span></a>
-    <li><a href="#Polls"><span class="secno">6</span> <span class="content">Suggested Polls</span></a>
-    <li><a href="#References"><span class="secno">7</span> <span class="content">References</span></a>
+    <li><a href="#Alt"><span class="secno">6</span> <span class="content">Possible Alternative</span></a>
+    <li><a href="#Polls"><span class="secno">7</span> <span class="content">Suggested Polls</span></a>
+    <li><a href="#References"><span class="secno">8</span> <span class="content">References</span></a>
    </ol>
   </nav>
   <main>
@@ -1745,6 +1746,14 @@ template&lt;class T> T* target() noexcept;
 template&lt;class T> const T* target() const noexcept;
 </del></pre>
    </blockquote>
+   <p>Do not provide deduction guides (deduction of qualifiers is questionable):</p>
+   <blockquote>
+<pre><del>template&lt;class R, class... ArgTypes>
+  function(R(*)(ArgTypes...)) -> function&lt;R(ArgTypes...)>;
+
+template&lt;class F> function(F) -> function&lt;<i>see below</i>>;</del>
+</pre>
+   </blockquote>
    <h2 class="heading settled" data-level="5" id="Impl"><span class="secno">5. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
    <p>
     There are many implementations of a move-only 
@@ -1756,7 +1765,40 @@ those implementations.
    <p>Previous revisions of this paper have included publicly accessible move-only
 function implementations, notably including implementations in HPX, Folly, and
 LLVM.</p>
-   <h2 class="heading settled" data-level="6" id="Polls"><span class="secno">6. </span><span class="content">Suggested Polls</span><a class="self-link" href="#Polls"></a></h2>
+   <h2 class="heading settled" data-level="6" id="Alt"><span class="secno">6. </span><span class="content">Possible Alternative</span><a class="self-link" href="#Alt"></a></h2>
+   <p>It is not recommended that we provide deduction guides due to subtleties
+regarding sensible deduction of qualifiers. If we wish to start with a
+deduction guide, we can do so, but the following deduction guide has not been
+used in practice. If specified, they should also deduce all forms of cv/ref/noexcept
+qualifiers so-as to be forwards-compatible with any support for such facilities that
+may be added in the future (being ill-formed if deduced today):</p>
+   <blockquote>
+<pre>template&lt;class R, class... ArgTypes>
+  mofunction(R(*)(ArgTypes...)) -> mofunction&lt;R(ArgTypes...) const>
+
+template&lt;class R, class... ArgTypes>
+  mofunction(R(*)(ArgTypes...) noexcept) -> mofunction&lt;R(ArgTypes...) const noexcept>
+
+template&lt;class F>
+  mofunction(F) -> mofunction&lt;see below>;
+
+  <i>Remarks</i>: This deduction guide participates in overload resolution only if
+  <tt>&amp;F::operator()</tt> is well-formed when treated as an unevaluated operand. In that case,
+  if <tt>decltype(&amp;F::operator())</tt> is a member function pointer type with a corresponding
+  function type <tt>FT</tt> (including any <i>cv</i> and reference qualifiers or <tt>noexcept</tt> specifier), the
+  deduced type is <tt>mofunction&lt;FT></tt>.
+
+  [<i>Example</i>:
+   void f() {
+     int i{5};
+     mofunction g = [&amp;](double) { return i; }; // deduces mofunction&lt;int(double)const>
+   }
+
+   — <i>end example</i>
+  ]
+</pre>
+   </blockquote>
+   <h2 class="heading settled" data-level="7" id="Polls"><span class="secno">7. </span><span class="content">Suggested Polls</span><a class="self-link" href="#Polls"></a></h2>
    <p>Proposal as-is</p>
    <p>
     Proposal without 
@@ -1771,8 +1813,9 @@ LLVM.</p>
     -like null Callable checking leading to empty
    </p>
    <p>Proposal with perfect-forwarding converting constructor instead of by-value</p>
+   <p>Proposal with deduction guides</p>
    <p>Secondary name bikeshedding???</p>
-   <h2 class="heading settled" data-level="7" id="References"><span class="secno">7. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
+   <h2 class="heading settled" data-level="8" id="References"><span class="secno">8. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
    <p>[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a></p>
    <p>[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a></p>
    <p>[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a></p>

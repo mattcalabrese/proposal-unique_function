@@ -5,10 +5,10 @@ Revision: 4
 Status: D
 Audience: LEWG
 Group: WG21
-URL: http://wg21.link/p0288r3
+URL: http://wg21.link/p0288r4
 Editor: Ryan McDougall <mcdougall.ryan@gmail.com>
         Matt Calabrese <metaprogrammingtheworld@gmail.com>
-Abstract: This paper proposes a conservative, move-only equivalent of <tt>std::function</tt>.
+Abstract: This paper proposes   a conservative, move-only equivalent of <tt>std::function</tt>.
 Date: 2019-02-21
 </pre>
 
@@ -175,6 +175,7 @@ Let QUAL_OPT_REF be an exposition-only macro defined in the following manner:
     - QUAL_OPT_REF is &
 ]
 </pre>
+
 </blockquote>
 
 Update the function signature of <tt>operator()</tt> to match the template
@@ -237,6 +238,17 @@ template&lt;class T&gt; const T* target() const noexcept;
 </del></pre>
 </blockquote>
 
+Do not provide deduction guides (deduction of qualifiers is questionable):
+
+<blockquote>
+<pre nohighlight>
+<del>template&lt;class R, class... ArgTypes&gt;
+  function(R(*)(ArgTypes...)) -&gt; function&lt;R(ArgTypes...)&gt;;
+
+template&lt;class F&gt; function(F) -&gt; function&lt;<i>see below</i>&gt;;</del>
+</pre>
+</blockquote>
+
 Implementation Experience {#Impl}
 =================================
 
@@ -248,16 +260,56 @@ Previous revisions of this paper have included publicly accessible move-only
 function implementations, notably including implementations in HPX, Folly, and
 LLVM.
 
+Possible Alternative {#Alt}
+===========================
+
+It is not recommended that we provide deduction guides due to subtleties
+regarding sensible deduction of qualifiers. If we wish to start with a
+deduction guide, we can do so, but the following deduction guide has not been
+used in practice. If specified, they should also deduce all forms of cv/ref/noexcept
+qualifiers so-as to be forwards-compatible with any support for such facilities that
+may be added in the future (being ill-formed if deduced today):
+
+<blockquote>
+<pre nohighlight>
+template&lt;class R, class... ArgTypes&gt;
+  mofunction(R(*)(ArgTypes...)) -&gt; mofunction&lt;R(ArgTypes...) const&gt;
+
+template&lt;class R, class... ArgTypes&gt;
+  mofunction(R(*)(ArgTypes...) noexcept) -&gt; mofunction&lt;R(ArgTypes...) const noexcept&gt;
+
+template&lt;class F&gt;
+  mofunction(F) -&gt; mofunction&lt;see below&gt;;
+
+  <i>Remarks</i>: This deduction guide participates in overload resolution only if
+  <tt>&amp;F::operator()</tt> is well-formed when treated as an unevaluated operand. In that case,
+  if <tt>decltype(&amp;F::operator())</tt> is a member function pointer type with a corresponding
+  function type <tt>FT</tt> (including any <i>cv</i> and reference qualifiers or <tt>noexcept</tt> specifier), the
+  deduced type is <tt>mofunction&lt;FT&gt;</tt>.
+
+  [<i>Example</i>:
+   void f() {
+     int i{5};
+     mofunction g = [&](double) { return i; }; // deduces mofunction&lt;int(double)const&gt;
+   }
+
+   — <i>end example</i>
+  ]
+</pre>
+</blockquote>
+
 Suggested Polls {#Polls}
 ========================
 
 Proposal as-is
 
-Proposal without <tt>std::function</tt>-like <tt>std::bad_function_call</tt> on invocation of empty (make it a precondition violation)
+Proposal without <tt>std::function</tt>-like <tt>std::bad_function_call</tt> on invocation of empty (make it a precondition violation -- may be migration concerns from <tt>std::function</tt>)
 
-Proposal without <tt>std::function</tt>-like null Callable checking leading to empty
+Proposal without <tt>std::function</tt>-like null Callable checking leading to empty (may be migration concerns from <tt>std::function</tt>)
 
 Proposal with perfect-forwarding converting constructor instead of by-value
+
+Proposal with deduction guides
 
 Secondary name bikeshedding???
 
