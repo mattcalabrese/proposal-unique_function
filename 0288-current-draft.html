@@ -2,7 +2,7 @@
  <head>
   <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
   <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
-  <title>D0228R3: unique_function</title>
+  <title>D0288R4: mofunction</title>
 <style data-fill-with="stylesheet">/******************************************************************************
  *                   Style sheet for the W3C specifications                   *
  *
@@ -1227,10 +1227,9 @@ Possible extra rowspan handling
       text-align: center;
     }
   </style>
-  <meta content="Bikeshed version e9290f0f6bc01459c8b7bdfa2bb91f6985fc5c67" name="generator">
-  <link href="http://wg21.link/p0228r3" rel="canonical">
+  <meta content="Bikeshed version 1cff2db4ee2c3bba7a4077d3007528ec73b0485d" name="generator">
+  <link href="http://wg21.link/p0288r3" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="0a3b52034ee5eb1dfbf3a656ce341ec873d67090" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1439,12 +1438,12 @@ pre .property::before, pre .property::after {
  <body class="h-entry">
   <div class="head">
    <p data-fill-with="logo"></p>
-   <h1 class="p-name no-ref" id="title">D0228R3<br>unique_function</h1>
-   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2018-11-09">2018-11-09</time></span></h2>
+   <h1 class="p-name no-ref" id="title">D0288R4<br>mofunction</h1>
+   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2019-02-21">2019-02-21</time></span></h2>
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
-     <dd><a class="u-url" href="http://wg21.link/p0228r3">http://wg21.link/p0228r3</a>
+     <dd><a class="u-url" href="http://wg21.link/p0288r3">http://wg21.link/p0288r3</a>
      <dt>Authors:
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Ryan McDougall &lt;mcdougall.ryan@gmail.com></span>
@@ -1461,44 +1460,120 @@ pre .property::before, pre .property::after {
   </div>
   <div class="p-summary" data-fill-with="abstract">
    <h2 class="no-num no-toc no-ref heading settled" id="abstract"><span class="content">Abstract</span></h2>
-   <p>This paper proposes a conservative, move-only equivalent of <code class="highlight"><c- n>std</c-><c- o>::</c-><c- n>function</c-></code>.</p>
+   <p>
+    This paper proposes a conservative, move-only equivalent of 
+    <tt>std::function</tt>
+    .
+   </p>
   </div>
   <nav data-fill-with="table-of-contents" id="toc">
    <h2 class="no-num no-toc no-ref" id="contents">Table of Contents</h2>
    <ol class="toc" role="directory">
     <li><a href="#History"><span class="secno">1</span> <span class="content">Brief History</span></a>
     <li><a href="#Overview"><span class="secno">2</span> <span class="content">Overview</span></a>
-    <li><a href="#Changes"><span class="secno">3</span> <span class="content">Summary of Changes</span></a>
-    <li><a href="#Impl"><span class="secno">4</span> <span class="content">Implementation Experience</span></a>
-    <li><a href="#Polls"><span class="secno">5</span> <span class="content">Suggested Polls</span></a>
-    <li><a href="#References"><span class="secno">6</span> <span class="content">References</span></a>
+    <li>
+     <a href="#SD2018"><span class="secno">3</span> <span class="content">Polls from LEWG San Diego Review (2018)</span></a>
+     <ol class="toc">
+      <li><a href="#support-func-func-const-func"><span class="secno">3.1</span> <span class="content">Support func(), func() const, func() &amp;&amp;</span></a>
+      <li><a href="#support-func--only"><span class="secno">3.2</span> <span class="content">Support func() &amp;&amp; only</span></a>
+      <li><a href="#remove-target-target_type"><span class="secno">3.3</span> <span class="content">Remove target/target_type</span></a>
+      <li><a href="#require-more-stuff-noexcept-const"><span class="secno">3.4</span> <span class="content">Require more stuff (noexcept, const&amp;&amp;, ...)</span></a>
+      <li><a href="#name-options"><span class="secno">3.5</span> <span class="content">Name Options</span></a>
+     </ol>
+    <li><a href="#Changes"><span class="secno">4</span> <span class="content">Summary of Changes</span></a>
+    <li><a href="#Impl"><span class="secno">5</span> <span class="content">Implementation Experience</span></a>
+    <li><a href="#Polls"><span class="secno">6</span> <span class="content">Suggested Polls</span></a>
+    <li><a href="#References"><span class="secno">7</span> <span class="content">References</span></a>
    </ol>
   </nav>
   <main>
    <h2 class="heading settled" data-level="1" id="History"><span class="secno">1. </span><span class="content">Brief History</span><a class="self-link" href="#History"></a></h2>
    <p>This paper started as a proposal by David Krauss, N4543[1], from 2015 and there has
 been an open issue in the LEWG bugzilla requesting such a facility since 2014[2].</p>
-   <p>Since then, the paper has gone through 4 revisions and has been considered in
+   <p>
+    Since then, the paper has gone through 4 revisions and has been considered in
 small groups in LEWG multiple times. Gradual feedback has led to the conservative
 proposal seen here. The most-recent draft prior to this was a late-paper written
 and presented by Ryan McDougall in LEWGI in San Diego[3]. It included multiple
 references to implementations of move-only functions and made a strong case for
-the importance of a move-only form of <code class="highlight"><c- n>std</c-><c- o>::</c-><c- n>function</c-></code>.</p>
+the importance of a move-only form of 
+    <tt>std::function</tt>
+    .
+   </p>
    <p>Feebdack given was encouragement for targetting C++20.</p>
+   <p>An updated version of that paper was presented on Saturday at the end of the
+San Diego meeting. Poll results from that presentation are presented after the
+overview in this document.</p>
    <h2 class="heading settled" data-level="2" id="Overview"><span class="secno">2. </span><span class="content">Overview</span><a class="self-link" href="#Overview"></a></h2>
-   <p>This conservative <code class="highlight"><c- n>unique_function</c-></code> is intended to be the same as <code class="highlight"><c- n>std</c-><c- o>::</c-><c- n>function</c-></code>,
-with the exceptions of the following:</p>
+   <p>
+    This conservative 
+    <tt>mofunction</tt>
+     is intended to be the same as 
+    <tt>std::function</tt>
+    ,
+with the exceptions of the following:
+   </p>
    <ol>
     <li data-md>
      <p>It is move-only.</p>
     <li data-md>
-     <p>It does not have the const-correctness bug of <code class="highlight"><c- n>std</c-><c- o>::</c-><c- n>function</c-></code> detailed in n4348.[4]</p>
+     <p>
+      It does not have the const-correctness bug of 
+      <tt>std::function</tt>
+       detailed in n4348.[4]
+     </p>
     <li data-md>
      <p>It provides minimal support for cv/ref qualified function types.</p>
     <li data-md>
-     <p>It does not have the <code class="highlight"><c- n>target_type</c-></code> and <code class="highlight"><c- n>target</c-></code> accessors (direction requested by users and implementors).</p>
+     <p>
+      It does not have the 
+      <tt>target_type</tt>
+       and 
+      <tt>target</tt>
+       accessors (direction requested by users and implementors).
+     </p>
    </ol>
-   <h2 class="heading settled" data-level="3" id="Changes"><span class="secno">3. </span><span class="content">Summary of Changes</span><a class="self-link" href="#Changes"></a></h2>
+   <h2 class="heading settled" data-level="3" id="SD2018"><span class="secno">3. </span><span class="content">Polls from LEWG San Diego Review (2018)</span><a class="self-link" href="#SD2018"></a></h2>
+   <h3 class="heading settled" data-level="3.1" id="support-func-func-const-func"><span class="secno">3.1. </span><span class="content">Support func(), func() const, func() &amp;&amp;</span><a class="self-link" href="#support-func-func-const-func"></a></h3>
+<pre class="highlight"><c- n>SF</c-> <c- n>F</c-> <c- n>N</c-> <c- n>A</c-> <c- n>SA</c->
+<c- mi>6</c->  <c- mi>6</c-> <c- mi>2</c-> <c- mi>1</c-> <c- mi>0</c->
+</pre>
+   <h3 class="heading settled" data-level="3.2" id="support-func--only"><span class="secno">3.2. </span><span class="content">Support func() &amp;&amp; only</span><a class="self-link" href="#support-func--only"></a></h3>
+<pre class="highlight"><c- n>SF</c-> <c- n>F</c-> <c- n>N</c-> <c- n>A</c-> <c- n>SA</c->
+<c- mi>2</c->  <c- mi>2</c-> <c- mi>7</c-> <c- mi>1</c-> <c- mi>1</c->
+</pre>
+   <h3 class="heading settled" data-level="3.3" id="remove-target-target_type"><span class="secno">3.3. </span><span class="content">Remove target/target_type</span><a class="self-link" href="#remove-target-target_type"></a></h3>
+<pre class="highlight"><c- n>SF</c-> <c- n>F</c-> <c- n>N</c-> <c- n>A</c-> <c- n>SA</c->
+<c- mi>12</c-> <c- mi>5</c-> <c- mi>0</c-> <c- mi>0</c-> <c- mi>0</c->
+</pre>
+   <h3 class="heading settled" data-level="3.4" id="require-more-stuff-noexcept-const"><span class="secno">3.4. </span><span class="content">Require more stuff (noexcept, const&amp;&amp;, ...)</span><a class="self-link" href="#require-more-stuff-noexcept-const"></a></h3>
+<pre class="highlight"><c- n>SF</c-> <c- n>F</c-> <c- n>N</c-> <c- n>A</c-> <c- n>SA</c->
+<c- mi>0</c->  <c- mi>1</c-> <c- mi>8</c-> <c- mi>6</c-> <c- mi>0</c->
+</pre>
+   <p>Note that the final poll (require more stuff) was not due to members being
+against the design, but because we could easily add those facilities in a later
+standard without any breakage.</p>
+   <h3 class="heading settled" data-level="3.5" id="name-options"><span class="secno">3.5. </span><span class="content">Name Options</span><a class="self-link" href="#name-options"></a></h3>
+   <p>
+    There was one final poll, which brought us to the name 
+    <tt>mofunction</tt>
+    .
+   </p>
+<pre class="highlight"><c- mi>3</c->  <c- n>unique_function</c->
+<c- mi>3</c->  <c- n>move_function</c->
+<c- mi>2</c->  <c- n>move_only_function</c->
+<c- mi>7</c->  <c- n>movable_function</c->
+<c- mi>8</c->  <c- n>mfunction</c->
+<c- mi>10</c-> <c- n>mofunction</c->
+<c- mi>8</c->  <c- n>mofun</c->
+<c- mi>8</c->  <c- n>mofunc</c->
+<c- mi>0</c->  <c- n>callback</c->
+<c- mi>4</c->  <c- n>mvfunction</c->
+<c- mi>2</c->  <c- n>func</c->
+<c- mi>0</c->  <c- n>callable</c->
+<c- mi>2</c->  <c- n>any_function</c->
+</pre>
+   <h2 class="heading settled" data-level="4" id="Changes"><span class="secno">4. </span><span class="content">Summary of Changes</span><a class="self-link" href="#Changes"></a></h2>
    <p>
     The following is not formal wording. It is an explanation of how this template
 and its specializations would differ from the specification of 
@@ -1507,62 +1582,62 @@ and its specializations would differ from the specification of
    </p>
    <p>Add (for simplicity, class-definitions are not inlined here):</p>
    <p>[func.wrap.func]</p>
-<pre class="highlight"><c- k>template</c-><c- o>&lt;</c-><c- k>class</c-> <c- nc>Sig</c-><c- o>></c-> <c- k>class</c-> <c- nc>unique_function</c-><c- p>;</c-> <c- c1>// not defined</c->
+<pre class="highlight"><c- k>template</c-><c- o>&lt;</c-><c- k>class</c-> <c- nc>Sig</c-><c- o>></c-> <c- k>class</c-> <c- nc>mofunction</c-><c- p>;</c-> <c- c1>// not defined</c->
 
 <c- k>template</c-><c- o>&lt;</c-><c- k>class</c-> <c- nc>R</c-><c- p>,</c-> <c- n>class</c-><c- p>...</c-> <c- n>ArgTypes</c-><c- o>></c->
-  <c- k>class</c-> <c- nc>unique_function</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-><c- o>></c-><c- p>;</c->
+  <c- k>class</c-> <c- nc>mofunction</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-><c- o>></c-><c- p>;</c->
 
 <ins><c- k>template</c-><c- o>&lt;</c-><c- k>class</c-> <c- nc>R</c-><c- p>,</c-> <c- n>class</c-><c- p>...</c-> <c- n>ArgTypes</c-><c- o>></c->
-  <c- k>class</c-> <c- nc>unique_function</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-> <c- k>const</c-><c- o>></c-><c- p>;</c->
+  <c- k>class</c-> <c- nc>mofunction</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-> <c- k>const</c-><c- o>></c-><c- p>;</c->
 
 <c- k>template</c-><c- o>&lt;</c-><c- k>class</c-> <c- nc>R</c-><c- p>,</c-> <c- n>class</c-><c- p>...</c-> <c- n>ArgTypes</c-><c- o>></c->
-  <c- k>class</c-> <c- nc>unique_function</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-><c- o>&amp;&amp;></c-><c- p>;</c-></ins>
+  <c- k>class</c-> <c- nc>mofunction</c-><c- o>&lt;</c-><c- n>R</c-><c- p>(</c-><c- n>ArgTypes</c-><c- p>...)</c-><c- o>&amp;&amp;></c-><c- p>;</c-></ins>
 </pre>
    <p>In [func.wrap.func.con]</p>
    <p>Do not provide a copy constructor:</p>
    <blockquote>
-<pre><del><tt>unique_function(const unique_function&amp; f);</tt></del>
+<pre><del><tt>mofunction(const mofunction&amp; f);</tt></del>
 </pre>
    </blockquote>
    <p>Do not provide a copy-assigment operator:</p>
    <blockquote>
-<pre><del><tt>unique_function&amp; operator=(const unique_function&amp; f);</tt></del>
+<pre><del><tt>mofunction&amp; operator=(const mofunction&amp; f);</tt></del>
 </pre>
    </blockquote>
    <p>
     In [func.wrap.func] specify the following wording for aid in describing the provided 
-    <tt>unique_function</tt>
+    <tt>mofunction</tt>
      partial specializations.
    </p>
    <blockquote>
 <pre>Let QUAL_OPT be an exposition-only macro defined to be a textual representation
-of the qualifiers of the function type parameter of <tt>unique_function</tt>.
+of the qualifiers of the function type parameter of <tt>mofunction</tt>.
 
 [<em>Note:</em>
-  For unique_function&lt;void() const>
+  For mofunction&lt;void() const>
     - QUAL_OPT is const
     
-  For unique_function&lt;void() &amp;&amp;>
+  For mofunction&lt;void() &amp;&amp;>
     - QUAL_OPT is &amp;&amp;
 
-  For unique_function&lt;void()>
+  For mofunction&lt;void()>
     - QUAL_OPT is
 ]
 
 Let QUAL_OPT_REF be an exposition-only macro defined in the following manner:
-    - If the function type parameter of <tt>unique_function</tt> is reference
+    - If the function type parameter of <tt>mofunction</tt> is reference
       qualified, let QUAL_OPT_REF be defined as QUAL_OPT.
 
     - Otherwise, let QUAL_OPT_REF be defined as QUAL_OPT&amp;.
 
 [<em>Note:</em>
-  For unique_function&lt;void() const>
+  For mofunction&lt;void() const>
     - QUAL_OPT_REF is const&amp;
 
-  For unique_function&lt;void() &amp;&amp;>
+  For mofunction&lt;void() &amp;&amp;>
     - QUAL_OPT_REF is &amp;&amp;
 
-  For unique_function&lt;void()>
+  For mofunction&lt;void()>
     - QUAL_OPT_REF is &amp;
 ]
 </pre>
@@ -1583,7 +1658,7 @@ issues of std::function).
      <em>Returns:</em> 
      <tt>
       INVOKE&lt;R>(
-      <ins>static_cast&lt;remove_cvref_t&lt;decltype(f)> QUAL_OPT_REF>(</ins>
+      <ins>static_cast&lt;decltype(f) QUAL_OPT_REF>(</ins>
       f
       <ins>)</ins>
       ,
@@ -1608,7 +1683,7 @@ issues of std::function).
 movability requirement instead of a copyability requirement and also require the
 correct kind of Callable:</p>
    <blockquote>
-<pre>template&lt;class F> unique_function(F f)
+<pre>template&lt;class F> mofunction(F f)
 </pre>
     <p>
      <em>Requires:</em> F shall be 
@@ -1631,11 +1706,11 @@ correct kind of Callable:</p>
    </blockquote>
    <p>Do the same for the converting assignment:</p>
    <blockquote>
-<pre>template&lt;class F> unique_function&amp; operator=(F&amp;&amp; f);
+<pre>template&lt;class F> mofunction&amp; operator=(F&amp;&amp; f);
 </pre>
     <p>
      <em>Effects:</em> As if by: 
-     <tt>unique_function(std​::​forward&lt;F>(f)).swap(*this);</tt>
+     <tt>mofunction(std​::​forward&lt;F>(f)).swap(*this);</tt>
     </p>
     <p><em>Returns:</em> *this.</p>
     <p>
@@ -1670,7 +1745,7 @@ template&lt;class T> T* target() noexcept;
 template&lt;class T> const T* target() const noexcept;
 </del></pre>
    </blockquote>
-   <h2 class="heading settled" data-level="4" id="Impl"><span class="secno">4. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
+   <h2 class="heading settled" data-level="5" id="Impl"><span class="secno">5. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
    <p>
     There are many implementations of a move-only 
     <tt>std::function</tt>
@@ -1681,21 +1756,23 @@ those implementations.
    <p>Previous revisions of this paper have included publicly accessible move-only
 function implementations, notably including implementations in HPX, Folly, and
 LLVM.</p>
-   <h2 class="heading settled" data-level="5" id="Polls"><span class="secno">5. </span><span class="content">Suggested Polls</span><a class="self-link" href="#Polls"></a></h2>
-   <p>Proposal as-is?</p>
+   <h2 class="heading settled" data-level="6" id="Polls"><span class="secno">6. </span><span class="content">Suggested Polls</span><a class="self-link" href="#Polls"></a></h2>
+   <p>Proposal as-is</p>
    <p>
-    Proposal with 
-    <tt>target</tt>
-     and 
-    <tt>target_type</tt>
-     *not* removed?
+    Proposal without 
+    <tt>std::function</tt>
+    -like 
+    <tt>std::bad_function_call</tt>
+     on invocation of empty (make it a precondition violation)
    </p>
-   <p>Proposal without the &amp;&amp; specialization?</p>
-   <p>Proposal without the const specialization (no way to invoke a <code class="highlight"><c- k>const</c-> <c- n>unique_function</c-><c- o>&lt;</c-><c- b>void</c-><c- p>()</c-><c- o>></c-></code>).</p>
-   <p>Proposal with a more complete set of cv/ref specializations?</p>
-   <p>If consensus on any of the above, bring to LWG in Kona without seeing in LEWG again?</p>
-   <p>Name bikeshedding.</p>
-   <h2 class="heading settled" data-level="6" id="References"><span class="secno">6. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
+   <p>
+    Proposal without 
+    <tt>std::function</tt>
+    -like null Callable checking leading to empty
+   </p>
+   <p>Proposal with perfect-forwarding converting constructor instead of by-value</p>
+   <p>Secondary name bikeshedding???</p>
+   <h2 class="heading settled" data-level="7" id="References"><span class="secno">7. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
    <p>[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a></p>
    <p>[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a></p>
    <p>[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a></p>

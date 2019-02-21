@@ -1,15 +1,15 @@
 <pre class='metadata'>
-Title: unique_function
-Shortname: D0228
-Revision: 3
+Title: mofunction
+Shortname: D0288
+Revision: 4
 Status: D
 Audience: LEWG
 Group: WG21
-URL: http://wg21.link/p0228r3
+URL: http://wg21.link/p0288r3
 Editor: Ryan McDougall <mcdougall.ryan@gmail.com>
         Matt Calabrese <metaprogrammingtheworld@gmail.com>
-Abstract: This paper proposes a conservative, move-only equivalent of <code>std::function</code>.
-Date: 2018-11-09
+Abstract: This paper proposes a conservative, move-only equivalent of <tt>std::function</tt>.
+Date: 2019-02-21
 </pre>
 
 Brief History {#History}
@@ -23,20 +23,79 @@ small groups in LEWG multiple times. Gradual feedback has led to the conservativ
 proposal seen here. The most-recent draft prior to this was a late-paper written
 and presented by Ryan McDougall in LEWGI in San Diego[3]. It included multiple
 references to implementations of move-only functions and made a strong case for
-the importance of a move-only form of <code>std::function</code>.
+the importance of a move-only form of <tt>std::function</tt>.
 
 Feebdack given was encouragement for targetting C++20.
+
+An updated version of that paper was presented on Saturday at the end of the
+San Diego meeting. Poll results from that presentation are presented after the
+overview in this document.
 
 Overview {#Overview}
 ====================
 
-This conservative <code>unique_function</code> is intended to be the same as <code>std::function</code>,
+This conservative <tt>mofunction</tt> is intended to be the same as <tt>std::function</tt>,
 with the exceptions of the following:
 
 1. It is move-only.
-2. It does not have the const-correctness bug of <code>std::function</code> detailed in n4348.[4]
+2. It does not have the const-correctness bug of <tt>std::function</tt> detailed in n4348.[4]
 3. It provides minimal support for cv/ref qualified function types.
-4. It does not have the <code>target_type</code> and <code>target</code> accessors (direction requested by users and implementors).
+4. It does not have the <tt>target_type</tt> and <tt>target</tt> accessors (direction requested by users and implementors).
+
+Polls from LEWG San Diego Review (2018) {#SD2018}
+=================================================
+
+## Support func(), func() const, func() &&
+
+<pre>
+SF F N A SA
+6  6 2 1 0
+</pre>
+
+## Support func() && only
+
+<pre>
+SF F N A SA
+2  2 7 1 1
+</pre>
+
+## Remove target/target_type
+
+<pre>
+SF F N A SA
+12 5 0 0 0
+</pre>
+
+## Require more stuff (noexcept, const&&, ...)
+
+<pre>
+SF F N A SA
+0  1 8 6 0
+</pre>
+
+Note that the final poll (require more stuff) was not due to members being
+against the design, but because we could easily add those facilities in a later
+standard without any breakage.
+
+## Name Options
+
+There was one final poll, which brought us to the name <tt>mofunction</tt>.
+
+<pre>
+3  unique_function
+3  move_function
+2  move_only_function
+7  movable_function
+8  mfunction
+10 mofunction
+8  mofun
+8  mofunc
+0  callback
+4  mvfunction
+2  func
+0  callable
+2  any_function
+</pre>
 
 Summary of Changes {#Changes}
 =============================
@@ -50,16 +109,16 @@ Add (for simplicity, class-definitions are not inlined here):
 [func.wrap.func]
 
 <pre>
-template&lt;class Sig&gt; class unique_function; // not defined
+template&lt;class Sig&gt; class mofunction; // not defined
 
 template&lt;class R, class... ArgTypes&gt;
-  class unique_function&lt;R(ArgTypes...)&gt;;
+  class mofunction&lt;R(ArgTypes...)&gt;;
 
 <ins>template&lt;class R, class... ArgTypes&gt;
-  class unique_function&lt;R(ArgTypes...) const&gt;;
+  class mofunction&lt;R(ArgTypes...) const&gt;;
 
 template&lt;class R, class... ArgTypes&gt;
-  class unique_function&lt;R(ArgTypes...)&amp;&amp;&gt;;</ins>
+  class mofunction&lt;R(ArgTypes...)&amp;&amp;&gt;;</ins>
 </pre>
 
 In [func.wrap.func.con]
@@ -68,7 +127,7 @@ Do not provide a copy constructor:
 
 <blockquote>
 <pre nohighlight>
-<del><tt>unique_function(const unique_function& f);</tt></del>
+<del><tt>mofunction(const mofunction& f);</tt></del>
 </pre>
 </blockquote>
 
@@ -76,43 +135,43 @@ Do not provide a copy-assigment operator:
 
 <blockquote>
 <pre nohighlight>
-<del><tt>unique_function& operator=(const unique_function& f);</tt></del>
+<del><tt>mofunction& operator=(const mofunction& f);</tt></del>
 </pre>
 </blockquote>
 
-In [func.wrap.func] specify the following wording for aid in describing the provided <tt>unique_function</tt>
+In [func.wrap.func] specify the following wording for aid in describing the provided <tt>mofunction</tt>
 partial specializations.
 
 <blockquote>
 <pre nohighlight>
 Let QUAL_OPT be an exposition-only macro defined to be a textual representation
-of the qualifiers of the function type parameter of <tt>unique_function</tt>.
+of the qualifiers of the function type parameter of <tt>mofunction</tt>.
 
 [<em>Note:</em>
-  For unique_function&lt;void() const&gt;
+  For mofunction&lt;void() const&gt;
     - QUAL_OPT is const
     
-  For unique_function&lt;void() &amp;&amp;&gt;
+  For mofunction&lt;void() &amp;&amp;&gt;
     - QUAL_OPT is &&
 
-  For unique_function&lt;void()&gt;
+  For mofunction&lt;void()&gt;
     - QUAL_OPT is
 ]
 
 Let QUAL_OPT_REF be an exposition-only macro defined in the following manner:
-    - If the function type parameter of <tt>unique_function</tt> is reference
+    - If the function type parameter of <tt>mofunction</tt> is reference
       qualified, let QUAL_OPT_REF be defined as QUAL_OPT.
 
     - Otherwise, let QUAL_OPT_REF be defined as QUAL_OPT&.
 
 [<em>Note:</em>
-  For unique_function&lt;void() const&gt;
+  For mofunction&lt;void() const&gt;
     - QUAL_OPT_REF is const&
 
-  For unique_function&lt;void() &amp;&amp;&gt;
+  For mofunction&lt;void() &amp;&amp;&gt;
     - QUAL_OPT_REF is &&
 
-  For unique_function&lt;void()&gt;
+  For mofunction&lt;void()&gt;
     - QUAL_OPT_REF is &
 ]
 </pre>
@@ -128,7 +187,7 @@ In [func.wrap.func.inv]
 <pre nohighlight>
 R operator()(ArgTypes... args)<del>const</del> <ins>QUAL_OPT</ins>;
 </pre>
-<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;remove_cvref_t&lt;decltype(f)&gt; QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
+<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;decltype(f) QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
     std​::​forward&lt;ArgTypes&gt;(args)...)</tt> , where f is the unqualified
     target object of <tt>*this</tt>, <ins></.
 
@@ -142,7 +201,7 @@ correct kind of Callable:
 
 <blockquote>
 <pre nohighlight>
-    template&lt;class F&gt; unique_function(F f)
+    template&lt;class F&gt; mofunction(F f)
 </pre>
     <em>Requires:</em> F shall be <del>Cpp17CopyConstructible </del><ins>Cpp17MoveConstructible</ins>
 
@@ -155,9 +214,9 @@ Do the same for the converting assignment:
 
 <blockquote>
 <pre nohighlight>
-template&lt;class F&gt; unique_function& operator=(F&& f);
+template&lt;class F&gt; mofunction& operator=(F&& f);
 </pre>
-<em>Effects:</em> As if by: <tt>unique_function(std​::​forward&lt;F&gt;(f)).swap(*this);</tt>
+<em>Effects:</em> As if by: <tt>mofunction(std​::​forward&lt;F&gt;(f)).swap(*this);</tt>
 
 <em>Returns:</em> *this.
 
@@ -192,19 +251,15 @@ LLVM.
 Suggested Polls {#Polls}
 ========================
 
-Proposal as-is?
+Proposal as-is
 
-Proposal with <tt>target</tt> and <tt>target_type</tt> *not* removed?
+Proposal without <tt>std::function</tt>-like <tt>std::bad_function_call</tt> on invocation of empty (make it a precondition violation)
 
-Proposal without the && specialization?
+Proposal without <tt>std::function</tt>-like null Callable checking leading to empty
 
-Proposal without the const specialization (no way to invoke a <code>const unique_function&lt;void()&gt;</code>).
+Proposal with perfect-forwarding converting constructor instead of by-value
 
-Proposal with a more complete set of cv/ref specializations?
-
-If consensus on any of the above, bring to LWG in Kona without seeing in LEWG again?
-
-Name bikeshedding.
+Secondary name bikeshedding???
 
 References {#References}
 ========================
