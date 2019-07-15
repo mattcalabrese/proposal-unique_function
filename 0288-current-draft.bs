@@ -1,15 +1,15 @@
 <pre class='metadata'>
-Title: mofunction
+Title: any_invocable
 Shortname: D0288
-Revision: 4
+Revision: 5
 Status: D
-Audience: LEWG
+Audience: LWG
 Group: WG21
-URL: http://wg21.link/p0288r4
+URL: https://htmlpreview.github.io/?https://github.com/mattcalabrese/proposal-unique_function/master/0288-current-draft.html
 Editor: Ryan McDougall <mcdougall.ryan@gmail.com>
         Matt Calabrese <metaprogrammingtheworld@gmail.com>
-Abstract: This paper proposes   a conservative, move-only equivalent of <tt>std::function</tt>.
-Date: 2019-02-21
+Abstract: This paper proposes a conservative, move-only equivalent of <tt>std::function</tt>.
+Date: 2019-07-15
 </pre>
 
 Brief History {#History}
@@ -31,16 +31,377 @@ An updated version of that paper was presented on Saturday at the end of the
 San Diego meeting. Poll results from that presentation are presented after the
 overview in this document.
 
+The revision was presented in Kona, receiving additional polls and feedback, and
+was to be forwarded to LWG pending updates reflecting additional poll results. Those
+changes have been applied to the wording in this paper. Polls from the LEWG Kona
+review are also provided in this document.
+
 Overview {#Overview}
 ====================
 
-This conservative <tt>mofunction</tt> is intended to be the same as <tt>std::function</tt>,
+This conservative <tt>any_invocable</tt> is intended to be the same as <tt>std::function</tt>,
 with the exceptions of the following:
 
 1. It is move-only.
 2. It does not have the const-correctness bug of <tt>std::function</tt> detailed in n4348.[4]
-3. It provides minimal support for cv/ref qualified function types.
+3. It provides support for cv/ref/noexcept qualified function types.
 4. It does not have the <tt>target_type</tt> and <tt>target</tt> accessors (direction requested by users and implementors).
+4. Invocation has strong preconditions.
+
+Specification {#Specification}
+==============================
+
+The following is relative to N4810.[5]
+
+Add &lt;any_invocable&gt; to Table 19 — C++ library headers
+
+<blockquote>
+<pre nohighlight>
+Header &lt;any_invocable&gt; synopsis [inv.syn]
+
+<tt>namespace std {
+  template&lt;class Sig&gt; class any_invocable; // not defined
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...)&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) &amp;&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) &amp;&amp;&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) const&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) const &amp;&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) noexcept&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) &amp; noexcept&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) &amp;&amp; noexcept&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) const noexcept&gt; { <em>see below</em> };
+
+  template&lt;class R, class... ArgTypes&gt;
+    class any_invocable&lt;R(ArgTypes...) const &amp; noexcept&gt; { <em>see below</em> };
+}</tt>
+
+1 The class definitions for the partial specializations of <tt>any_invocable</tt> mentioned
+  above are specified using exposition-only macros <tt>QUAL_OPT</tt>, <tt>QUAL_OPT_REF</tt>,
+  and <tt>NOEXCEPT_VAL</tt>, as described below.
+
+2 For each partial specialization of <tt>any_invocable</tt> mentioned above,
+  let <tt>QUAL_OPT</tt> be an exposition-only macro defined to be a textual representation
+  of the <i>cv</i> and reference qualifiers of the function type parameter of <tt>any_invocable</tt>.
+
+3 [<em>Note:</em>
+  For <tt>any_invocable&lt;void() const&gt;</tt>
+    - <tt>QUAL_OPT</tt> is <tt>const</tt>
+    
+  For <tt>any_invocable&lt;void() &amp;&amp;&gt;</tt>
+    - <tt>QUAL_OPT</tt> is <tt>&amp;&amp;</tt>
+
+  For <tt>any_invocable&lt;void()&gt;</tt>
+    - <tt>QUAL_OPT</tt> is
+  ]
+
+4 For each partial specialization of <tt>any_invocable</tt> mentioned above,
+let <tt>NOEXCEPT_VAL</tt> be an exposition-only macro defined to be <tt>true</tt> if the function
+type parameter of <tt>any_invocable</tt> is noexcept, otherwise <tt>false</tt>.
+
+5 [<em>Note:</em>
+  For <tt>any_invocable&lt;void() noexcept&gt;</tt>
+    - <tt>NOEXCEPT_VAL</tt> is <tt>true</tt>
+    
+  For <tt>any_invocable&lt;void()&gt;</tt>
+    - <tt>NOEXCEPT_VAL</tt> is <tt>false</tt>
+  ]
+
+6 For each partial specialization of <tt>any_invocable</tt> mentioned above, let
+  <tt>QUAL_OPT_REF</tt> be an exposition-only macro defined in the following manner:
+      - If the function type parameter of <tt>any_invocable</tt> is reference
+        qualified, let <tt>QUAL_OPT_REF</tt> be defined as <tt>QUAL_OPT</tt>.
+
+      - Otherwise, let <tt>QUAL_OPT_REF</tt> be defined as <tt>QUAL_OPT&amp;</tt>.
+
+7 [<em>Note:</em>
+  For <tt>any_invocable&lt;void() const&gt;</tt>
+    - <tt>QUAL_OPT_REF</tt> is <tt>const &amp;</tt>
+
+  For <tt>any_invocable&lt;void() &amp;&amp;&gt;</tt>
+    - <tt>QUAL_OPT_REF</tt> is <tt>&amp;&amp;</tt>
+
+  For <tt>any_invocable&lt;void()&gt;</tt>
+    - <tt>QUAL_OPT_REF</tt> is <tt>&amp;</tt>
+  ]
+
+8 For each partial specialization of <tt>any_invocable</tt> mentioned above, the following is
+  a synopsis of that partial specialization and its associated non-member functions.
+
+<tt>namespace std {
+
+  template&lt;class R, class... ArgTypes&gt;
+  class any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt; {
+  public:
+    using result_type = R;
+
+    // 20.14.16.2.1, construct/copy/destroy
+    any_invocable() noexcept;
+    any_invocable(nullptr_t) noexcept;
+    any_invocable(any_invocable&amp;&amp;) noexcept;
+    template&lt;class F&gt; any_invocable(F&amp;&amp;);
+
+    template&lt;class T, class... Args&gt;
+      explicit any_invocable(in_place_type_t&lt;T&gt;, Args&&...);
+    template&lt;class T, class U, class... Args&gt;
+      explicit any_invocable(in_place_type_t&lt;T&gt;, initializer_list&lt;U&gt;, Args&amp;&amp;...);
+    
+    any_invocable&amp; operator=(any_invocable&amp;&amp;) noexcept;
+    any_invocable&amp; operator=(nullptr_t) noexcept;
+    template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp;);
+    template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt;) noexcept;
+
+    ~any_invocable();
+
+    // 20.14.16.2.2, any_invocable modifiers
+    void swap(any_invocable&amp;) noexcept;
+
+    // 20.14.16.2.3, any_invocable capacity
+    explicit operator bool() const noexcept;
+
+    // 20.14.16.2.4, any_invocable invocation
+    R operator()(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL);
+  };
+
+  / 20.14.16.2.6, Null pointer comparisons
+  template&lt;class R, class... ArgTypes&gt;
+    bool operator==(const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&, nullptr_t) noexcept;
+
+  template&lt;class R, class... ArgTypes&gt;
+    bool operator==(nullptr_t, const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&) noexcept;
+
+  template&lt;class R, class... ArgTypes&gt;
+    bool operator!=(const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&, nullptr_t) noexcept;
+
+  template&lt;class R, class... ArgTypes&gt;
+    bool operator!=(nullptr_t, const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&) noexcept;
+
+  // 20.14.16.2.7, specialized algorithms
+  template&lt;class R, class... ArgTypes&gt;
+    void swap(any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&,
+        any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&) noexcept;
+}</tt>
+
+9 The <tt>any_invocable</tt> class template provides polymorphic wrappers that generalize
+  the notion of a callable object (20.14.2). These wrappers can store, move, and call
+  arbitrary callable objects (20.14.2), given a call signature (20.14.2), allowing
+  functions to be first-class objects.
+
+10 A callable type (20.14.2) <tt>F</tt> is Callable for argument types <tt>ArgTypes</tt>
+   and return type <tt>R</tt> if the expression
+   <tt>INVOKE&lt;R&gt;(declval&lt;F&gt;(), declval&lt;ArgTypes&gt;()...)</tt>,
+   considered as an unevaluated operand (7.2), is well-formed (20.14.3).
+
+SECTION.1  Constructors and destructor [inv.wrap.func.con]
+any_invocable() noexcept;
+
+1 <em>Ensures:</em> !*this.
+
+<tt>any_invocable(nullptr_t) noexcept;</tt>
+
+2 <em>Ensures:</em> <tt>!*this</tt>.
+
+<tt>any_invocable(any_invocable&amp;&amp; f) noexcept;</tt>
+
+3 <em>Ensures:</em> If <tt>!f</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
+  is equivalent to the target of <tt>f</tt> before the construction, and <tt>f</tt> is in a valid state
+  with an unspecified value.
+
+4 [<em>Note:</em> Implementations should avoid the use of dynamically allocated memory for
+   small callable objects,for example, wheref’s target is an object holding only a
+   pointer or reference to an object and a member function pointer.— <em>end note</em>]
+
+<tt>template&lt;class F&gt; any_invocable(F&amp;&amp; f);</tt>
+
+5 <em>Requires:</em> <tt>decay&lt;F&gt;</tt> shall be Cpp17MoveConstructible.
+
+6 <em>Constraints:</em>
+
+(6.1) — <tt>decay_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt> and
+
+(6.2) — <tt>decay_t&lt;F&gt;</tt> is not a specialization of <tt>in_place_type_t</tt> and
+
+(6.3) — <tt>is_constructible_v&lt;decay_t&lt;F&gt;, F&gt;</tt> is <tt>true</tt> and
+
+(6.4) — <tt>is_­move_­constructible_­v&lt;decay_t&lt;F&gt;&gt;</tt> is <tt>true</tt> and
+
+(6.5) — <tt>F QUAL_OPT_REF</tt> is Callable (20.14.16.2) for argument types
+        <tt>ArgTypes...</tt>, return type <tt>R</tt>, and
+
+(6.6) — <tt>!NOEXCEPT_VAL || noexcept(INVOKE&lt;R&gt;(declval&lt;F QUAL_OPT_REF&gt;(), declval&lt;ArgTypes&gt;()...))</tt> is <tt>true</tt>.
+
+7 <em>Ensures:</em> <tt>!*this</tt> if any of the following hold:
+
+—(7.1) <tt>f</tt> is a null function pointer value.
+
+—(7.2) <tt>f</tt> is a null member pointer value.
+
+—(7.3) <tt>F</tt> is an instance of the <tt>any_invocable</tt> class template, and <tt>!f</tt>. 
+
+8 Otherwise, <tt>*this</tt> targets a copy of <tt>f</tt> initialized with <tt>
+  std::forward&lt;F&gt;(f)</tt>. [<em>Note</em>: Implementations should avoid the use of
+  dynamically allocated memory for small callable objects, for example, where <tt>f</tt> is
+  an object holding only a pointer or reference to an object and a member function
+  pointer.— <em>end note</em>]
+
+9 <em>Throws:</em> Shall not throw exceptions when <tt>f</tt> is a function pointer or a
+  <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt>
+  or any exception thrown by the expression <tt>decay_t&lt;F&gt;(std::forward&lt;F&gt;(f))</tt>.
+
+<tt>template&lt;class T, class... Args&gt;
+  explicit any_invocable(in_place_type_t&lt;T&gt;, Args&amp;&amp;... args);</tt>
+
+10 Let <tt>VT</tt> be <tt>decay_t&lt;T&gt;</tt>.
+
+11 <em>Requires:</em> <tt>VT</tt> shall be Cpp17MoveConstructible.
+
+12 <em>Constraints:</em>
+
+(12.1) — <tt>is_constructible_v&lt;VT, Args...&gt;</tt> is <tt>true</tt> and
+
+(12.2) — <tt>is_­move_­constructible_­v&lt;VT&gt;</tt> is <tt>true</tt> and
+
+(12.3) — <tt>VT QUAL_OPT_REF</tt> is Callable (20.14.16.2) for argument types
+         <tt>ArgTypes...</tt>, return type <tt>R</tt>, and
+
+(12.4) — <tt>!NOEXCEPT_VAL || noexcept(INVOKE&lt;R&gt;(declval&lt;F QUAL_OPT_REF&gt;(), declval&lt;ArgTypes&gt;()...))</tt> is <tt>true</tt>.
+
+13 <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
+   with <tt>std::forward&lt;Args&gt;(args)...</tt> by <i>direct-non-list-initialization</i>. [<em>Note</em>:
+   Implementations should avoid the use of dynamically allocated memory for small
+   callable objects, for example, where <tt>f</tt> is an object holding only a pointer or 
+   reference to an object and a member function pointer.— <em>end note</em>]
+
+<tt>template&lt;class T, class U, class... Args&gt;
+  explicit any_invocable(in_place_type_t&lt;T&gt;, initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args);</tt>
+
+14 Let VT be decay_t&lt;T&gt;.
+
+15 <em>Requires:</em> <tt>VT</tt> shall be Cpp17MoveConstructible.
+
+16 <em>Constraints:</em>
+
+(16.1) — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, Args...&gt;</tt> is <tt>true</tt> and
+
+(16.2) — <tt>is_­move_­constructible_­v&lt;VT&gt;</tt> is <tt>true</tt> and
+
+(16.3) — <tt>VT QUAL_OPT_REF</tt> is Callable (20.14.16.2) for argument types
+         <tt>ArgTypes...</tt>, return type <tt>R</tt>, and
+
+(16.4) — <tt>!NOEXCEPT_VAL || noexcept(INVOKE&lt;R&gt;(declval&lt;F QUAL_OPT_REF&gt;(), declval&lt;ArgTypes&gt;()...))</tt> is <tt>true</tt>.
+
+17 <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
+   with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt> by <i>direct-non-list-initialization</i>. [<em>Note</em>:
+   Implementations should avoid the use of dynamically allocated memory for small
+   callable objects, for example, where <tt>f</tt> is an object holding only a pointer or
+   reference to an object and a member function pointer.— <em>end note</em>]
+
+<tt>any_invocable&amp; operator=(any_invocable&amp;&amp; f) noexcept;</tt>
+
+18 <em>Effects:</em> Replaces the target of <tt>*this</tt> with the target of <tt>f</tt>.
+
+19 <em>Returns:</em> <tt>*this</tt>.
+
+<tt>any_invocable&amp; operator=(nullptr_t) noexcept;</tt>
+
+20 <em>Effects:</em> If <tt>*this != nullptr</tt>, destroys the target of <tt>this</tt>.
+
+21 <em>Ensures:</em> <tt>!(*this)</tt>.
+
+22 <em>Returns:</em> <tt>*this</tt>.
+
+<tt>template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp; f);</tt>
+
+23 <em>Effects:</em> As if by: <tt>any_invocable(std::forward&lt;F&gt;(f)).swap(*this);</tt>
+
+24 <em>Returns:</em> <tt>*this.</tt>
+
+25 <em>Requires:</em> <tt>decay&lt;F&gt;</tt> shall be Cpp17MoveConstructible.
+
+26 <em>Constraints:</em>
+
+(26.1) — <tt>decay_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt> and
+
+(26.3) — <tt>is_constructible_v&lt;decay_t&lt;F&gt;, F&gt;</tt> is <tt>true</tt> and
+
+(26.4) — <tt>is_­move_­constructible_­v&lt;decay_t&lt;F&gt;&gt;</tt> is <tt>true</tt> and
+
+(26.5) — <tt>F QUAL_OPT_REF</tt> is Callable (20.14.16.2) for argument types
+         <tt>ArgTypes...</tt>, return type <tt>R</tt>, and
+
+(26.4) — <tt>!NOEXCEPT_VAL || noexcept(INVOKE&lt;R&gt;(declval&lt;F QUAL_OPT_REF&gt;(), declval&lt;ArgTypes&gt;()...))</tt> is <tt>true</tt>.
+
+template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt; f) noexcept;
+
+27 <em>Effects:</em> As if by: <tt>any_invocable(f).swap(*this);</tt>
+
+28 <em>Returns:</em> <tt>*this</tt>.
+
+<tt>~any_invocable()</tt>;
+
+29 <em>Effects:</em> If <tt>*this != nullptr</tt>, destroys the target of <tt>this</tt>.
+
+SECTION.2  Modifiers [inv.wrap.func.mod]
+<tt>void swap(any_invocable&amp; other) noexcept;</tt>
+
+1 <em>Effects:</em> Interchanges the targets of <tt>*this</tt> and <tt>other</tt>.
+
+SECTION.3  Capacity [inv.wrap.func.cap]
+<tt>explicit operator bool() const noexcept;</tt>
+
+1 <em>Returns:</em> <tt>true</tt> if *<tt>this</tt> has a target, otherwise <tt>false</tt>.
+
+SECTION.4  Invocation [inv.wrap.func.inv]
+<tt>R operator()(ArgTypes... args) QUAL_OPT noexcept(NOEXCEPT_VAL);</tt>
+
+1 <em>Returns:</em> <tt>INVOKE&lt;R&gt;(static_cast&lt;decltype(f) QUAL_OPT_REF&gt;(f),
+  std​::​forward&lt;ArgTypes&gt;(args)...)</tt> , where <tt>f</tt> is the target object of <tt>*this</tt>,.
+
+2 <em>Requires:</em> <tt>(bool)*this</tt> is <tt>true</tt>.
+
+3 <em>Throws:</em> Any exception thrown by the wrapped callable object.
+
+SECTION.5  Null pointer comparison functions [inv.wrap.func.nullptr]
+<tt>template&lt;class R, class... ArgTypes&gt;
+  bool operator==(const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f, nullptr_t) noexcept;
+template&lt;class R, class... ArgTypes&gt;
+  bool operator==(nullptr_t, const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f) noexcept;</tt>
+
+1 <em>Returns:</em> <tt>!f</tt>.
+
+<tt>template&lt;class R, class... ArgTypes&gt;
+  bool operator!=(const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f, nullptr_t) noexcept;
+template&lt;class R, class... ArgTypes&gt;
+  bool operator!=(nullptr_t, const any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f) noexcept;</tt>
+
+2 <em>Returns:</em> <tt>(bool)f</tt>.
+
+SECTION.6  Specialized algorithms [inv.wrap.func.alg]
+<tt>template&lt;class R, class... ArgTypes&gt;
+  void swap(any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f1,
+      any_invocable&lt;R(ArgTypes...) QUAL_OPT noexcept(NOEXCEPT_VAL)&gt;&amp; f2) noexcept;</tt>
+
+1 Effects:As if by: <tt>f1.swap(f2)</tt>
+
+</pre>
+</blockquote>
 
 Polls from LEWG San Diego Review (2018) {#SD2018}
 =================================================
@@ -79,7 +440,7 @@ standard without any breakage.
 
 ## Name Options
 
-There was one final poll, which brought us to the name <tt>mofunction</tt>.
+There was one final poll, which brought us to the name <tt>any_invocable</tt>.
 
 <pre>
 3  unique_function
@@ -87,7 +448,7 @@ There was one final poll, which brought us to the name <tt>mofunction</tt>.
 2  move_only_function
 7  movable_function
 8  mfunction
-10 mofunction
+10 any_invocable
 8  mofun
 8  mofunc
 0  callback
@@ -97,221 +458,118 @@ There was one final poll, which brought us to the name <tt>mofunction</tt>.
 2  any_function
 </pre>
 
-Summary of Changes {#Changes}
-=============================
+Polls from LEWG Kona Review (2019) {#K2019}
+=================================================
 
-The following is not formal wording. It is an explanation of how this template
-and its specializations would differ from the specification of <tt>std::function</tt>
-relative to the WP from the most recent mailing, N4778.[5]
-
-Add (for simplicity, class-definitions are not inlined here):
-
-[func.wrap.func]
+## We want to spend time on this now in order to include it in C++20 
 
 <pre>
-template&lt;class Sig&gt; class mofunction; // not defined
-
-template&lt;class R, class... ArgTypes&gt;
-  class mofunction&lt;R(ArgTypes...)&gt;;
-
-<ins>template&lt;class R, class... ArgTypes&gt;
-  class mofunction&lt;R(ArgTypes...) const&gt;;
-
-template&lt;class R, class... ArgTypes&gt;
-  class mofunction&lt;R(ArgTypes...)&amp;&amp;&gt;;</ins>
+SF F N A SA
+8  8 2 0 0
 </pre>
 
-In [func.wrap.func.con]
+## Add support for func() const& and func()&
 
-Do not provide a copy constructor:
-
-<blockquote>
-<pre nohighlight>
-<del><tt>mofunction(const mofunction& f);</tt></del>
-</pre>
-</blockquote>
-
-Do not provide a copy-assigment operator: 
-
-<blockquote>
-<pre nohighlight>
-<del><tt>mofunction& operator=(const mofunction& f);</tt></del>
-</pre>
-</blockquote>
-
-In [func.wrap.func] specify the following wording for aid in describing the provided <tt>mofunction</tt>
-partial specializations.
-
-<blockquote>
-<pre nohighlight>
-Let QUAL_OPT be an exposition-only macro defined to be a textual representation
-of the qualifiers of the function type parameter of <tt>mofunction</tt>.
-
-[<em>Note:</em>
-  For mofunction&lt;void() const&gt;
-    - QUAL_OPT is const
-    
-  For mofunction&lt;void() &amp;&amp;&gt;
-    - QUAL_OPT is &&
-
-  For mofunction&lt;void()&gt;
-    - QUAL_OPT is
-]
-
-Let QUAL_OPT_REF be an exposition-only macro defined in the following manner:
-    - If the function type parameter of <tt>mofunction</tt> is reference
-      qualified, let QUAL_OPT_REF be defined as QUAL_OPT.
-
-    - Otherwise, let QUAL_OPT_REF be defined as QUAL_OPT&.
-
-[<em>Note:</em>
-  For mofunction&lt;void() const&gt;
-    - QUAL_OPT_REF is const&
-
-  For mofunction&lt;void() &amp;&amp;&gt;
-    - QUAL_OPT_REF is &&
-
-  For mofunction&lt;void()&gt;
-    - QUAL_OPT_REF is &
-]
+<pre>
+SF F N A SA
+0  8 7 0 0
 </pre>
 
-</blockquote>
+## Add support for func() noexcept (x all of the above)
 
-Update the function signature of <tt>operator()</tt> to match the template
-parameter exactly, and invoke the contained Callable with the correct cv
-qualification and value category (this prevents duplicating the const-correctness
-issues of std::function).
-
-In [func.wrap.func.inv]
-<blockquote>
-<pre nohighlight>
-R operator()(ArgTypes... args)<del>const</del> <ins>QUAL_OPT</ins>;
+<pre>
+SF F  N A SA
+2  12 2 0 0
 </pre>
-<em>Returns:</em> <tt>INVOKE&lt;R&gt;(<ins>static_cast&lt;decltype(f) QUAL_OPT_REF&gt;(</ins>f<ins>)</ins>,
-    std​::​forward&lt;ArgTypes&gt;(args)...)</tt> , where f is the unqualified
-    target object of <tt>*this</tt>, <ins></.
 
-<em>Throws:</em> <tt>bad_­function_­call</tt> if <tt>!*this</tt>; otherwise, any exception thrown by the
-    wrapped callable object.
-</blockquote>
+## Include the option for CTAD
 
-In [func.wrap.func.con] regarding the constructor taking a Callable, have a
-movability requirement instead of a copyability requirement and also require the
-correct kind of Callable:
-
-<blockquote>
-<pre nohighlight>
-    template&lt;class F&gt; mofunction(F f)
+<pre>
+SF F N A SA
+0  1 5 9 0
 </pre>
-    <em>Requires:</em> F shall be <del>Cpp17CopyConstructible </del><ins>Cpp17MoveConstructible</ins>
 
-    <em>Remarks:</em> This constructor shall not participate in overload resolution unless
-    <tt>decay_­t&lt;F&gt; <ins>QUAL_OPT_REF </ins></tt> is <del>Lvalue-</del>Callable for
-    argument types <tt>ArgTypes...</tt> and return type <tt>R</tt>.
-</blockquote>
+## Name: callable vs any invocable
 
-Do the same for the converting assignment:
-
-<blockquote>
-<pre nohighlight>
-template&lt;class F&gt; mofunction& operator=(F&& f);
+<pre>
+SC C N AI SAI
+3  2 3 5  6
 </pre>
-<em>Effects:</em> As if by: <tt>mofunction(std​::​forward&lt;F&gt;(f)).swap(*this);</tt>
 
-<em>Returns:</em> *this.
+## any_invocable vs invocable
 
-<em>Remarks:</em> This assignment operator shall not participate in overload
-    resolution unless <tt>decay_­t&lt;F&gt;<ins> QUAL_OPT_REF</ins></tt> is <del>Lvalue-</del>Callable for
-    argument types <tt>ArgTypes...</tt> and return type <tt>R</tt>.
-</blockquote>
-
-Additionally, we suggest not including <tt>target</tt> and <tt>target_type</tt>, while being open to
-the possibility of proposing it for C++23:
-
-<blockquote>
-<pre nohighlight><del>
-const type_info& target_type() const noexcept;
-
-template&lt;class T&gt; T* target() noexcept;
-template&lt;class T&gt; const T* target() const noexcept;
-</del></pre>
-</blockquote>
-
-Do not provide deduction guides (deduction of qualifiers is questionable):
-
-<blockquote>
-<pre nohighlight>
-<del>template&lt;class R, class... ArgTypes&gt;
-  function(R(*)(ArgTypes...)) -&gt; function&lt;R(ArgTypes...)&gt;;
-
-template&lt;class F&gt; function(F) -&gt; function&lt;<i>see below</i>&gt;;</del>
+<pre>
+SAI AI N I SI
+3   7  2 5 1
 </pre>
-</blockquote>
+
+## Header choice
+
+<pre>
+7 &lt;functional&gt;
+11 &lt;any_invocable&gt;
+11 &lt;invocable&gt;
+3 &lt;()&gt;
+</pre>
+
+## Can get std::function from &lt;any_invocable&gt; 
+
+<pre>
+SF F N A SA
+0  1 4 4 7
+</pre>
+
+## Can get std::function from &lt;invocable&gt;
+
+<pre>
+SF F N A SA
+1  3 6 3 2
+</pre>
+
+Decide on &lt;any_invocable&gt;. Unanimous for &lt;functional&gt; to pull it in,
+even if in its own header.
+
+## Remove the null-check in the call operator and throwing of bad_function_call
+
+<pre>
+SF F N A SA
+8  2 1 0 0
+</pre>
+
+## Remove the null-check in constructors that are not nullptr_t
+
+<pre>
+std::any_callable<void(void)> ac = my_ptr_object;
+if(ac)  { /* true even if my_ptr is nullptr */ }
+</pre>
+
+<pre>
+SF F N A SA
+0  2 2 4 3
+</pre>
+
+## Perfect forwarding for converting constructor instead of by-value
+
+Unanimous
+
+## Forward to LWG for C++20
+
+<pre>
+SF F N A SA
+8  5 0 0 0
+</pre>
 
 Implementation Experience {#Impl}
 =================================
 
 There are many implementations of a move-only <tt>std::function</tt> with a
 design that is similar to this. What is presented is a conservative subset of
-those implementations.
+those implementations. The changes suggested in LEWG, though minimal, have not
+been used in a large codebase.
 
 Previous revisions of this paper have included publicly accessible move-only
 function implementations, notably including implementations in HPX, Folly, and
 LLVM.
-
-Possible Alternative {#Alt}
-===========================
-
-It is not recommended that we provide deduction guides due to subtleties
-regarding sensible deduction of qualifiers. If we wish to start with a
-deduction guide, we can do so, but the following deduction guide has not been
-used in practice. If specified, they should also deduce all forms of cv/ref/noexcept
-qualifiers so-as to be forwards-compatible with any support for such facilities that
-may be added in the future (being ill-formed if deduced today):
-
-<blockquote>
-<pre nohighlight>
-template&lt;class R, class... ArgTypes&gt;
-  mofunction(R(*)(ArgTypes...)) -&gt; mofunction&lt;R(ArgTypes...) const&gt;
-
-template&lt;class R, class... ArgTypes&gt;
-  mofunction(R(*)(ArgTypes...) noexcept) -&gt; mofunction&lt;R(ArgTypes...) const noexcept&gt;
-
-template&lt;class F&gt;
-  mofunction(F) -&gt; mofunction&lt;see below&gt;;
-
-  <i>Remarks</i>: This deduction guide participates in overload resolution only if
-  <tt>&amp;F::operator()</tt> is well-formed when treated as an unevaluated operand. In that case,
-  if <tt>decltype(&amp;F::operator())</tt> is a member function pointer type with a corresponding
-  function type <tt>FT</tt> (including any <i>cv</i> and reference qualifiers or <tt>noexcept</tt> specifier), the
-  deduced type is <tt>mofunction&lt;FT&gt;</tt>.
-
-  [<i>Example</i>:
-   void f() {
-     int i{5};
-     mofunction g = [&](double) { return i; }; // deduces mofunction&lt;int(double)const&gt;
-   }
-
-   — <i>end example</i>
-  ]
-</pre>
-</blockquote>
-
-Suggested Polls {#Polls}
-========================
-
-Proposal as-is
-
-Proposal without <tt>std::function</tt>-like <tt>std::bad_function_call</tt> on invocation of empty (make it a precondition violation -- may be migration concerns from <tt>std::function</tt>)
-
-Proposal without <tt>std::function</tt>-like null Callable checking leading to empty (may be migration concerns from <tt>std::function</tt>)
-
-Proposal with perfect-forwarding converting constructor instead of by-value
-
-Proposal with deduction guides
-
-Secondary name bikeshedding???
 
 References {#References}
 ========================
@@ -324,4 +582,4 @@ References {#References}
 
 [4]: Geoffrey Romer: N4348 "Making std::function safe for concurrency" <a href="www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html">www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html</a>
 
-[5]: Richard Smith: N4778 "Working Draft, Standard for Programming Language C++" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/n4778.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/n4778.pdf</a>
+[5]: Richard Smith: N4778 "Working Draft, Standard for Programming Language C++" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4810.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4810.pdf</a>
