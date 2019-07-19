@@ -89,27 +89,29 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
 <blockquote>
 <pre nohighlight>
-        <b>SECTION Header &lt;any_invocable&gt; synopsis                                     [inv]</b>
+        <b>SECTION Storage for any callable                                            [inv]</b>
 
      1  This subclause describes components that C++ programs may use to perform
         operations on callable objects of a discriminated type.
 
-     2  The header <tt>&lt;any_invocable&gt;</tt> provides partial specializations of <tt>any_invocable</tt> for
+        <b>SECTION.1 Header &lt;any_invocable&gt; synopsis                               [inv.syn]</b>
+
+     1  The header <tt>&lt;any_invocable&gt;</tt> provides partial specializations of <tt>any_invocable</tt> for
         each combination of the possible replacements of the placeholders <tt><i>cv</i></tt>, <tt><i>ref</i></tt>, and
         <tt><i>noex</i></tt> where:
 
- (2.1)   — <tt><i>cv</i></tt> is either <tt>const</tt> or empty.
+ (1.1)   — <tt><i>cv</i></tt> is either <tt>const</tt> or empty.
 
- (2.2)   — <tt><i>ref</i></tt> is either <tt>&amp;</tt>, <tt>&amp;&amp;</tt>, or empty.
+ (1.2)   — <tt><i>ref</i></tt> is either <tt>&amp;</tt>, <tt>&amp;&amp;</tt>, or empty.
 
- (2.3)   — <tt><i>noex</i></tt> is either <tt>true</tt> or <tt>false</tt>.
+ (1.3)   — <tt><i>noex</i></tt> is either <tt>true</tt> or <tt>false</tt>.
 
-     3  For each of the possible combinations of the placeholders mentioned above, there
+     2  For each of the possible combinations of the placeholders mentioned above, there
         is a placeholder <tt><i>inv-quals</i></tt> defined as follows:
 
- (3.1)   — If <tt><i>ref</i></tt> is empty, let <tt><i>inv-quals</i></tt> be <tt><i>cv</i>&amp;</tt>
+ (2.1)   — If <tt><i>ref</i></tt> is empty, let <tt><i>inv-quals</i></tt> be <tt><i>cv</i>&amp;</tt>
 
- (3.2)   — otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
+ (2.2)   — otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
 
 <tt>          namespace std {
             template&lt;class Sig&gt; class any_invocable; // never defined
@@ -119,7 +121,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
           }</tt>
 
 
-        <b>SECTION.1 Class &lt;any_invocable&gt;                                       [inv.class]</b>
+        <b>SECTION.2 Class &lt;any_invocable&gt;                                       [inv.class]</b>
 
 <tt>          namespace std {
             template&lt;class Sig&gt; class any_invocable; // never defined
@@ -129,7 +131,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
             public:
               using result_type = R;
 
-              // SECTION.2, construct/copy/destroy
+              // SECTION.3, construct/copy/destroy
               any_invocable() noexcept;
               any_invocable(nullptr_t) noexcept;
               any_invocable(any_invocable&amp;&amp;) noexcept;
@@ -147,19 +149,19 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
               ~any_invocable();
 
-              // SECTION.3, any_invocable modifiers
+              // SECTION.4, any_invocable modifiers
               void swap(any_invocable&amp;) noexcept;
 
-              // SECTION.4, any_invocable capacity
+              // SECTION.5, any_invocable capacity
               explicit operator bool() const noexcept;
 
-              // SECTION.5, any_invocable invocation
+              // SECTION.6, any_invocable invocation
               R operator()(ArgTypes...) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>);
 
-              // SECTION.6, null pointer comparisons
+              // SECTION.7, null pointer comparisons
               friend bool operator==(const any_invocable&, nullptr_t) noexcept;
 
-              // SECTION.7, specialized algorithms
+              // SECTION.8, specialized algorithms
               friend void swap(any_invocable&amp;, any_invocable&amp;) noexcept;
             };
           }</tt>
@@ -173,7 +175,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
         for a small contained value. However, any such small-object optimization can only
         be applied to types <tt>T</tt> for which <tt>is_nothrow_move_constructible_v&lt;T&gt;</tt> is <tt>true</tt>.
 
-        <b>SECTION.2  Constructors and destructor                                   [inv.con]</b>
+        <b>SECTION.3  Constructors and destructor                                   [inv.con]</b>
 
         <tt>any_invocable() noexcept;</tt>
         <tt>any_invocable(nullptr_t) noexcept;</tt>
@@ -293,19 +295,19 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
     24        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
 
-         <b>SECTION.3  Modifiers                                                    [inv.mod]</b>
+         <b>SECTION.4  Modifiers                                                    [inv.mod]</b>
 
         <tt>void swap(any_invocable&amp; other) noexcept;</tt>
 
      1        <em>Effects:</em> Interchanges the targets of <tt>*this</tt> and <tt>other</tt>.
 
-         <b>SECTION.4  Capacity                                                     [inv.cap]</b>
+         <b>SECTION.5  Capacity                                                     [inv.cap]</b>
 
         <tt>explicit operator bool() const noexcept;</tt>
 
      1        <em>Returns:</em> <tt>true</tt> if *<tt>this</tt> has a target, otherwise <tt>false</tt>.
 
-         <b>SECTION.5  Invocation                                                   [inv.inv]</b>
+         <b>SECTION.6  Invocation                                                   [inv.inv]</b>
 
         <tt>R operator()(ArgTypes... args) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>);</tt>
 
@@ -316,13 +318,13 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
               where <tt>F</tt> is the type of the target object of <tt>*this</tt> and <tt>f</tt> is the target object
               of <tt>*this</tt>.
 
-         <b>SECTION.6  Null pointer comparison functions                        [inv.nullptr]</b>
+         <b>SECTION.7  Null pointer comparison functions                        [inv.nullptr]</b>
 
         <tt>bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
 
      1        <em>Returns:</em> <tt>!f</tt>.
 
-         <b>SECTION.7  Specialized algorithms                                       [inv.alg]</b>
+         <b>SECTION.8  Specialized algorithms                                       [inv.alg]</b>
 
         <tt>void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
