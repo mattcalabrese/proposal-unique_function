@@ -1230,7 +1230,7 @@ Possible extra rowspan handling
   <meta content="Bikeshed version e9290f0f6bc01459c8b7bdfa2bb91f6985fc5c67" name="generator">
   <link href="https://htmlpreview.github.io/?https://github.com/mattcalabrese/proposal-unique_function/master/0288-current-draft.html" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="969326dae3922d1c7e27839f22d07f826d785c18" name="document-revision">
+  <meta content="ed5325a180f5f822cb1d79ef581a8b468227dc85" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1699,120 +1699,124 @@ with the exceptions of the following:
 
         <tt>template&lt;class F> any_invocable(F&amp;&amp; f);</tt>
 
-     3        <em>Constraints:</em>
+     3        Let <tt>VT</tt> be <tt>decay_t&lt;F></tt>.
 
- (3.1)             — <tt>remove_cvref_t&lt;F></tt> is not the same type as <tt>any_invocable</tt>, and
+     4        <em>Constraints:</em>
 
- (3.2)             — <tt>remove_cvref_t&lt;F></tt> is not a specialization of <tt>in_place_type_t</tt>, and
+ (4.1)             — <tt>remove_cvref_t&lt;F></tt> is not the same type as <tt>any_invocable</tt>, and
 
- (3.3)             — <tt>is_constructible_v&lt;decay_t&lt;F>, F></tt> is <tt>true</tt>, and
+ (4.2)             — <tt>remove_cvref_t&lt;F></tt> is not a specialization of <tt>in_place_type_t</tt>, and
 
- (3.4)             — <tt>is_invocable_r_v&lt;R, decay_t&lt;F> <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
+ (4.3)             — <tt>is_constructible_v&lt;VT, F></tt> is <tt>true</tt>, and
 
- (3.5)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, decay_t&lt;F> <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
+ (4.4)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
 
-     4        <em>Mandates:</em> <tt>decay_t&lt;F></tt> meets the <i>Cpp17Destructible</i> requirements.
+ (4.5)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
 
-     5        <em>Expects:</em> If <tt>is_move_constructible_v&lt;decay_t&lt;F>></tt> is <tt>true</tt>, <tt>decay_t&lt;F></tt> meets the
+     5        <em>Mandates:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements.
+
+     6        <em>Expects:</em> If <tt>is_move_constructible_v&lt;VT></tt> is <tt>true</tt>, <tt>VT</tt> meets the
               <i>Cpp17MoveConstructible</i> requirements.
 
-     6        <em>Ensures:</em> <tt>!*this</tt> is <tt>true</tt> if any of the following hold:
+     7        <em>Ensures:</em> <tt>!*this</tt> is <tt>true</tt> if any of the following hold:
 
- (6.1)             — <tt>f</tt> is a null function pointer value, or
+ (7.1)             — <tt>f</tt> is a null function pointer value, or
 
- (6.2)             — <tt>f</tt> is a null member pointer value, or
+ (7.2)             — <tt>f</tt> is a null member pointer value, or
 
- (6.3)             — <tt>remove_cvref_t&lt;F></tt> is a specialization of the <tt>any_invocable</tt> class template,
+ (7.3)             — <tt>remove_cvref_t&lt;F></tt> is a specialization of the <tt>any_invocable</tt> class template,
                      and <tt>!f</tt> is <tt>true</tt>.
 
-     7        Otherwise, <tt>*this</tt> targets an object of type <tt>decay_t&lt;F></tt> initialized with
+     8        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt> initialized with
               <tt>std::forward&lt;F>(f)</tt> by <i>direct-non-list-initialization</i>.
 
-     8        <em>Throws:</em> Does not throw exceptions when <tt>decay_t&lt;F></tt> is a function pointer or a
+     9        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
               <tt>reference_wrapper&lt;T></tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>decay_t&lt;F>(std::forward&lt;F>(f))</tt>.
+              thrown by the expression <tt>VT(std::forward&lt;F>(f))</tt>.
 
         <tt>template&lt;class T, class... Args>
             explicit any_invocable(in_place_type_t&lt;T>, Args&amp;&amp;... args);</tt>
 
-     9        Let <tt>VT</tt> be <tt>decay_t&lt;T></tt>.
+    10        Let <tt>VT</tt> be <tt>decay_t&lt;T></tt>.
 
-    10        <em>Constraints:</em>
+    11        <em>Constraints:</em>
 
-(10.1)            — <tt>is_constructible_v&lt;VT, Args...></tt> is <tt>true</tt>, and
+(11.1)            — <tt>is_constructible_v&lt;VT, Args...></tt> is <tt>true</tt>, and
 
-(10.2)            — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
+(11.2)            — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
 
-(10.3)            — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
+(11.3)            — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
 
-    11        <em>Mandates:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements.
-
-    12        <em>Expects:</em> If <tt>is_move_constructible_v&lt;VT></tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
+    12        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>, and <tt>VT</tt> meets the <i>Cpp17Destructible</i>
               requirements.
 
-    13        <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized with
+    13        <em>Expects:</em> If <tt>is_move_constructible_v&lt;VT></tt> is <tt>true</tt>, <tt>VT</tt> meets the
+              <i>Cpp17MoveConstructible</i> requirements.
+
+    14        <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized with
               <tt>std::forward&lt;Args>(args)...</tt> by <i>direct-non-list-initialization</i>.
 
         <tt>template&lt;class T, class U, class... Args>
             explicit any_invocable(in_place_type_t&lt;T>, initializer_list&lt;U> ilist, Args&amp;&amp;... args);</tt>
 
-    14        Let <tt>VT</tt> be <tt>decay_t&lt;T></tt>.
+    15        Let <tt>VT</tt> be <tt>decay_t&lt;T></tt>.
 
-    15        <em>Constraints:</em>
+    16        <em>Constraints:</em>
 
-(15.1)             — <tt>is_constructible_v&lt;VT, initializer_list&lt;U>&amp;, ArgTypes...></tt> is <tt>true</tt>, and
+(16.1)             — <tt>is_constructible_v&lt;VT, initializer_list&lt;U>&amp;, ArgTypes...></tt> is <tt>true</tt>, and
 
-(15.2)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
+(16.2)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>, and
 
-(15.3)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
+(16.3)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...></tt> is <tt>true</tt>.
 
-    16        <em>Mandates:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements.
-
-    17        <em>Expects:</em> If <tt>is_move_constructible_v&lt;VT></tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
+    17        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>, and <tt>VT</tt> meets the <i>Cpp17Destructible</i>
               requirements.
 
-    18        <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
+    18        <em>Expects:</em> If <tt>is_move_constructible_v&lt;VT></tt> is <tt>true</tt>, <tt>VT</tt> meets the
+              <i>Cpp17MoveConstructible</i> requirements.
+
+    19        <em>Ensures:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
               with <tt>ilist, std::forward&lt;ArgTypes>(args)...</tt> by <i>direct-non-list-initialization</i>.
 
         <tt>any_invocable&amp; operator=(any_invocable&amp;&amp; f);</tt>
 
-    19        <em>Effects:</em> Replaces the target object of <tt>*this</tt> with the target object of <tt>f</tt>.
+    20        <em>Effects:</em> Replaces the target object of <tt>*this</tt> with the target object of <tt>f</tt>.
 
-    20        <em>Ensures:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
+    21        <em>Ensures:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
               is equivalent to the target of <tt>f</tt> before the construction, and <tt>f</tt> is in a
               valid state with an unspecified value.
 
-    21        <em>Returns:</em> <tt>*this</tt>.
+    22        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>any_invocable&amp; operator=(nullptr_t) noexcept;</tt>
 
-    22        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    23        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
 
-    23        <em>Ensures:</em> <tt>!*this</tt> is <tt>true</tt>.
+    24        <em>Ensures:</em> <tt>!*this</tt> is <tt>true</tt>.
 
-    24        <em>Returns:</em> <tt>*this</tt>.
+    25        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>template&lt;class F> any_invocable&amp; operator=(F&amp;&amp; f);</tt>
 
-    25        <em>Effects:</em> Equivalent to:<tt>
+    26        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(std::forward&lt;F>(f)).swap(*this);
                      return *this;</tt>
 
         <tt>template&lt;class F> any_invocable&amp; operator=(reference_wrapper&lt;F> f) noexcept;</tt>
 
-    26        <em>Effects:</em> Equivalent to:<tt>
+    27        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(f).swap(*this);
                      return *this;</tt>
 
         <tt>~any_invocable()</tt>;
 
-    27        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    28        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
 
          <b>SECTION.4  Modifiers                                                    [inv.mod]</b>
 
         <tt>void swap(any_invocable&amp; other) noexcept;</tt>
 
-     1        <em>Effects:</em> Interchanges the targets of <tt>*this</tt> and <tt>other</tt>.
+     1        <em>Effects:</em> Exchanges the targets of <tt>*this</tt> and <tt>other</tt>.
 
          <b>SECTION.5  Capacity                                                     [inv.cap]</b>
 
@@ -1842,6 +1846,7 @@ with the exceptions of the following:
         <tt>void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
      1        <em>Effects</em>: Equivalent to: <tt>f1.swap(f2)</tt>.
+
 </pre>
     </blockquote>
     <h2 class="heading settled" data-level="4" id="SD2018"><span class="secno">4. </span><span class="content">Polls from LEWG San Diego Review (2018)</span><a class="self-link" href="#SD2018"></a></h2>
