@@ -1,7 +1,7 @@
 <pre class='metadata'>
 Title: any_invocable
 Shortname: D0288
-Revision: 5
+Revision: 6
 Status: D
 Audience: LWG
 Group: WG21
@@ -9,7 +9,7 @@ URL: https://htmlpreview.github.io/?https://github.com/mattcalabrese/proposal-un
 Editor: Matt Calabrese <metaprogrammingtheworld@gmail.com>
         Ryan McDougall <mcdougall.ryan@gmail.com>
 Abstract: This paper proposes a conservative, move-only equivalent of <tt>std::function</tt>.
-Date: 2019-07-19
+Date: 2020-07-14
 </pre>
 
 Brief History {#History}
