@@ -64,7 +64,7 @@ Make it so that <tt>&lt;functional&gt;</tt> is guaranteed to include <tt>&lt;any
 <pre nohighlight>
         <b>20.14.1  Header &lt;functional&gt; synopsis                            [functional.syn]</b>
 
-<tt>          <ins>#include &lt;any_invocable&gt; // see [inv.syn]
+         <ins>#include &lt;any_invocable&gt; // see [inv.syn]
 </ins>
           namespace std {
 </pre>
@@ -77,7 +77,10 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
         <b>SECTION Storage for any callable                                            [inv]</b>
 
      1  This subclause describes components that C++ programs may use to perform
-        operations on callable objects of a discriminated type.
+        operations on callable objects of a given signature type.
+
+The function class template provides polymorphic wrappers that generalize the notion of a function pointer.
+Wrappers can store, copy, and call arbitrary callable objects, given a call signature, allowing functions to be first-class objects.
 
         <b>SECTION.1 Header &lt;any_invocable&gt; synopsis                               [inv.syn]</b>
 
@@ -96,41 +99,43 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
  (2.1)   — If <tt><i>ref</i></tt> is empty, let <tt><i>inv-quals</i></tt> be <tt><i>cv</i>&amp;</tt>
 
- (2.2)   — otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
+ (2.2)   — Otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
 
 <tt>          namespace std {
-            template&lt;class Sig&gt; class any_invocable; // not defined
+            template&lt;class ...S&gt; class any_invocable; // not defined
 
             template&lt;class R, class... ArgTypes&gt;
               class any_invocable&lt;R(ArgTypes...) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>)&gt;;
           }</tt>
 
 
-        <b>SECTION.2 Class &lt;any_invocable&gt;                                       [inv.class]</b>
+        <b>SECTION.2 Class template any_invocable                                       [inv.class]</b>
 
 <tt>          namespace std {
-            template&lt;class Sig&gt; class any_invocable; // never defined
+            template&lt;class ...S&gt; class any_invocable; // not defined
 
             template&lt;class R, class... ArgTypes&gt;
             class any_invocable&lt;R(ArgTypes...) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>)&gt; {
             public:
               using result_type = R;
 
-              // SECTION.3, construct/copy/destroy
+              // SECTION.3, construct/move/destroy
+              template&lt;class VT&gt;
+                bool is-callable-from = see below; // exposition-only
+
               any_invocable() noexcept;
               any_invocable(nullptr_t) noexcept;
               any_invocable(any_invocable&amp;&amp;) noexcept;
               template&lt;class F&gt; any_invocable(F&amp;&amp;);
 
               template&lt;class T, class... Args&gt;
-                explicit any_invocable(in_place_type_t&lt;T&gt;, Args&&...);
+                explicit any_invocable(in_place_type_t&lt;T&gt;, Args&amp;&amp;...);
               template&lt;class T, class U, class... Args&gt;
                 explicit any_invocable(in_place_type_t&lt;T&gt;, initializer_list&lt;U&gt;, Args&amp;&amp;...);
     
               any_invocable&amp; operator=(any_invocable&amp;&amp;);
               any_invocable&amp; operator=(nullptr_t) noexcept;
               template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp;);
-              template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt;) noexcept;
 
               ~any_invocable();
 
@@ -150,8 +155,8 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
      1  The <tt>any_invocable</tt> class template provides polymorphic wrappers that generalize
         the notion of a callable object [func.def]. These wrappers can store, move, and
-        call arbitrary callable objects [func.def], given a call signature [func.def],
-        allowing functions to be first-class objects.
+        call arbitrary callable objects, given a call signature, allowing functions to be
+        first-class objects.
 
      2  Implementations are encouraged to avoid the use of dynamically allocated memory
         for a small contained value.
@@ -161,6 +166,23 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
 
         <b>SECTION.3  Constructors and destructor                                   [inv.con]</b>
+
+        <tt>template&lt;class VT&gt;
+          constexpr bool is-callable-from;</tt>
+
+     1        Is equivalient to one of the following clauses:
+
+ (1.1)          — If <tt><i>ref</i></tt> is not empty and <tt><i>noex</i></tt> is <tt>true</tt> then it is equivalent to
+                  <tt>is_nothrow_invocable_r_v&lt;R, VT cv ref, Args...&gt;</tt>
+
+ (1.2)          — Otherwise, if <tt><i>ref</i></tt> is not empty then it is equivalent to
+                  <tt>is_invocable_r_v&lt;R, VT cv ref, Args...&gt;</tt>
+
+ (1.3)          — Otherwise, if <tt><i>noex</i></tt> is <tt>true</tt> then it is equivalent to
+                  <tt>is_nothrow_invocable_r_v&lt;R, VT cv&amp;, Args...&gt; &amp;&amp; is_nothrow_invocable_r_v&lt;R, VT cv&amp;&amp;, Args...&gt;</tt>
+
+ (1.4)          — Otherwise, it is equivalent to
+                  <tt>is_invocable_r_v&lt;R, VT cv&, Args...&gt; &amp;&amp; is_invocable_r_v&lt;R, VT cv&amp;&amp;, Args...&gt;</tt>
 
         <tt>any_invocable() noexcept;</tt>
         <tt>any_invocable(nullptr_t) noexcept;</tt>
@@ -179,15 +201,13 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
      4        <em>Constraints:</em>
 
- (4.1)             — <tt>remove_cvref_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt>, and
+ (4.1)            — <tt>remove_cvref_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt>, and
 
- (4.2)             — <tt>remove_cvref_t&lt;F&gt;</tt> is not a specialization of <tt>in_place_type_t</tt>, and
+ (4.2)            — <tt>remove_cvref_t&lt;F&gt;</tt> is not a specialization of <tt>in_place_type_t</tt>, and
 
- (4.3)             — <tt>is_constructible_v&lt;VT, F&gt;</tt> is <tt>true</tt>, and
+ (4.3)            — <tt>is_constructible_v&lt;VT, F&gt;</tt> is <tt>true</tt>, and
 
- (4.4)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
-
- (4.5)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+ (4.4)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
      5        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
@@ -195,19 +215,18 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
      6        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt> if any of the following hold:
 
- (6.1)             — <tt>f</tt> is a null function pointer value, or
+ (6.1)            — <tt>f</tt> is a null function pointer value, or
 
- (6.2)             — <tt>f</tt> is a null member pointer value, or
+ (6.2)            — <tt>f</tt> is a null member pointer value, or
 
- (6.3)             — <tt>remove_cvref_t&lt;F&gt;</tt> is a specialization of the <tt>any_invocable</tt> class template,
+ (6.3)            — <tt>remove_cvref_t&lt;F&gt;</tt> is a specialization of the <tt>any_invocable</tt> class template,
                      and <tt>!f</tt> is <tt>true</tt>.
 
-     7        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt> with direct-non-list-initialization
+     7        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized with
               <tt>std::forward&lt;F&gt;(f)</tt>.
 
-     8        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+     8        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>template&lt;class T, class... Args&gt;
             explicit any_invocable(in_place_type_t&lt;T&gt;, Args&amp;&amp;... args);</tt>
@@ -218,9 +237,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
 (10.1)            — <tt>is_constructible_v&lt;VT, Args...&gt;</tt> is <tt>true</tt>, and
 
-(10.2)            — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
-
-(10.3)            — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+(10.2)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
     11        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
 
@@ -228,70 +245,66 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-    13        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized with
-              <tt>std::forward&lt;Args&gt;(args)...</tt> by direct-non-list-initialization.
+    13        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized with
+              <tt>std::forward&lt;Args&gt;(args)...</tt>.
 
-    13        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+    14        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>template&lt;class T, class U, class... Args&gt;
             explicit any_invocable(in_place_type_t&lt;T&gt;, initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args);</tt>
 
-    14        Let <tt>VT</tt> be <tt>decay_t&lt;T&gt;</tt>.
+    15        Let <tt>VT</tt> be <tt>decay_t&lt;T&gt;</tt>.
 
-    15        <em>Constraints:</em>
+    16        <em>Constraints:</em>
 
-(15.1)             — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, ArgTypes...&gt;</tt> is <tt>true</tt>, and
+(16.1)            — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, ArgTypes...&gt;</tt> is <tt>true</tt>, and
 
-(15.2)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
+(16.2)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
-(15.3)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+    17        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
 
-    16        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
-
-    17        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
+    18        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-    18        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
-              with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt> by direct-non-list-initialization.
+    19        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized
+              with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt>.
 
-    19        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+    20        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>any_invocable&amp; operator=(any_invocable&amp;&amp; f);</tt>
 
-    20        <em>Postconditions:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
+    21        <em>Postconditions:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
               is equivalent to the target of <tt>f</tt> before the construction, and <tt>f</tt> is in a
               valid state with an unspecified value.
 
-    21        <em>Returns:</em> <tt>*this</tt>.
+    22        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>any_invocable&amp; operator=(nullptr_t) noexcept;</tt>
 
-    22        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    23        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
 
-    23        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt>.
+    24        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt>.
 
-    24        <em>Returns:</em> <tt>*this</tt>.
+    25        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp; f);</tt>
 
-    25        <em>Effects:</em> Equivalent to:<tt>
+    26        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(std::forward&lt;F&gt;(f)).swap(*this);
                      return *this;</tt>
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt; f) noexcept;</tt>
 
-    26        <em>Effects:</em> Equivalent to:<tt>
+    27        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(f).swap(*this);
                      return *this;</tt>
 
         <tt>~any_invocable()</tt>;
 
-    27        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    28        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
 
          <b>SECTION.4  Invocation                                                   [inv.inv]</b>
 
@@ -304,7 +317,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
      2        <em>Preconditions:</em> <tt>bool(*this)</tt> is <tt>true</tt>.
 
      3        <em>Effects:</em> Equivalent to:
-              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F <i>inv-quals</i>&gt;(f), std​::​forward&lt;ArgTypes&gt;(args)...);</tt>
+              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std​::​forward&lt;ArgTypes&gt;(args)...);</tt>
               where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> has type <tt>F</tt>.
 
          <b>SECTION.5  Utility                                                    [inv.util]</b>
@@ -313,11 +326,11 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
      1        <em>Effects:</em> Exchanges the values of <tt>*this</tt> and <tt>other</tt>.
 
-        <tt>void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
+        <tt>friend void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
      2        <em>Effects</em>: Equivalent to: <tt>f1.swap(f2)</tt>.
 
-        <tt>bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
+        <tt>friend bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
 
      3        <em>Returns:</em> <tt>!f</tt>.
 

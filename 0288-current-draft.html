@@ -1294,7 +1294,7 @@ Possible extra rowspan handling
     blockquote c-[vi] { color: inherit; } /* Name.Variable.Instance */
     blockquote c-[il] { color: inherit; } /* Literal.Number.Integer.Long */
   </style>
-  <meta content="Bikeshed version 40de15f9, updated Thu Jun 11 17:47:04 2020 -0700" name="generator">
+  <meta content="Bikeshed version 7c63c139, updated Fri Jul 17 17:12:19 2020 -0700" name="generator">
   <link href="https://htmlpreview.github.io/?https://github.com/mattcalabrese/proposal-unique_function/master/0288-current-draft.html" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
 <style>/* style-autolinks */
@@ -1642,18 +1642,20 @@ with the exceptions of the following:
    <blockquote>
 <pre>        <b>20.14.1  Header &lt;functional&gt; synopsis                            [functional.syn]</b>
 
-<tt>          <ins>#include &lt;any_invocable&gt; // see [inv.syn]
+         <ins>#include &lt;any_invocable&gt; // see [inv.syn]
 </ins>
           namespace std {
-</tt></pre>
+</pre>
    </blockquote>
-   <tt>
-    <p>Insert the following section at the end of <b>Function Objects</b> [function.objects], where SECTION is a placeholder for the root of the section numbering:</p>
-    <blockquote>
+   <p>Insert the following section at the end of <b>Function Objects</b> [function.objects], where SECTION is a placeholder for the root of the section numbering:</p>
+   <blockquote>
 <pre>        <b>SECTION Storage for any callable                                            [inv]</b>
 
      1  This subclause describes components that C++ programs may use to perform
-        operations on callable objects of a discriminated type.
+        operations on callable objects of a given signature type.
+
+The function class template provides polymorphic wrappers that generalize the notion of a function pointer.
+Wrappers can store, copy, and call arbitrary callable objects, given a call signature, allowing functions to be first-class objects.
 
         <b>SECTION.1 Header &lt;any_invocable&gt; synopsis                               [inv.syn]</b>
 
@@ -1672,27 +1674,30 @@ with the exceptions of the following:
 
  (2.1)   — If <tt><i>ref</i></tt> is empty, let <tt><i>inv-quals</i></tt> be <tt><i>cv</i>&amp;</tt>
 
- (2.2)   — otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
+ (2.2)   — Otherwise, let <tt><i>inv-quals</i></tt> be <tt><i>cv ref</i></tt>.
 
 <tt>          namespace std {
-            template&lt;class Sig&gt; class any_invocable; // not defined
+            template&lt;class ...S&gt; class any_invocable; // not defined
 
             template&lt;class R, class... ArgTypes&gt;
               class any_invocable&lt;R(ArgTypes...) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>)&gt;;
           }</tt>
 
 
-        <b>SECTION.2 Class &lt;any_invocable&gt;                                       [inv.class]</b>
+        <b>SECTION.2 Class template any_invocable                                       [inv.class]</b>
 
 <tt>          namespace std {
-            template&lt;class Sig&gt; class any_invocable; // never defined
+            template&lt;class ...S&gt; class any_invocable; // not defined
 
             template&lt;class R, class... ArgTypes&gt;
             class any_invocable&lt;R(ArgTypes...) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>)&gt; {
             public:
               using result_type = R;
 
-              // SECTION.3, construct/copy/destroy
+              // SECTION.3, construct/move/destroy
+              template&lt;class VT&gt;
+                bool is-callable-from = see below; // exposition-only
+
               any_invocable() noexcept;
               any_invocable(nullptr_t) noexcept;
               any_invocable(any_invocable&amp;&amp;) noexcept;
@@ -1706,7 +1711,6 @@ with the exceptions of the following:
               any_invocable&amp; operator=(any_invocable&amp;&amp;);
               any_invocable&amp; operator=(nullptr_t) noexcept;
               template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp;);
-              template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt;) noexcept;
 
               ~any_invocable();
 
@@ -1726,8 +1730,8 @@ with the exceptions of the following:
 
      1  The <tt>any_invocable</tt> class template provides polymorphic wrappers that generalize
         the notion of a callable object [func.def]. These wrappers can store, move, and
-        call arbitrary callable objects [func.def], given a call signature [func.def],
-        allowing functions to be first-class objects.
+        call arbitrary callable objects, given a call signature, allowing functions to be
+        first-class objects.
 
      2  Implementations are encouraged to avoid the use of dynamically allocated memory
         for a small contained value.
@@ -1737,6 +1741,23 @@ with the exceptions of the following:
 
 
         <b>SECTION.3  Constructors and destructor                                   [inv.con]</b>
+
+        <tt>template&lt;class VT&gt;
+          constexpr bool is-callable-from;</tt>
+
+     1        Is equivalient to one of the following clauses:
+
+ (1.1)          — If <tt><i>ref</i></tt> is not empty and <tt><i>noex</i></tt> is <tt>true</tt> then it is equivalent to
+                  <tt>is_nothrow_invocable_r_v&lt;R, VT cv ref, Args...&gt;</tt>
+
+ (1.2)          — Otherwise, if <tt><i>ref</i></tt> is not empty then it is equivalent to
+                  <tt>is_invocable_r_v&lt;R, VT cv ref, Args...&gt;</tt>
+
+ (1.3)          — Otherwise, if <tt><i>noex</i></tt> is <tt>true</tt> then it is equivalent to
+                  <tt>is_nothrow_invocable_r_v&lt;R, VT cv&amp;, Args...&gt; &amp;&amp; is_nothrow_invocable_r_v&lt;R, VT cv&amp;&amp;, Args...&gt;</tt>
+
+ (1.4)          — Otherwise, it is equivalent to
+                  <tt>is_invocable_r_v&lt;R, VT cv&amp;, Args...&gt; &amp;&amp; is_invocable_r_v&lt;R, VT cv&amp;&amp;, Args...&gt;</tt>
 
         <tt>any_invocable() noexcept;</tt>
         <tt>any_invocable(nullptr_t) noexcept;</tt>
@@ -1755,15 +1776,13 @@ with the exceptions of the following:
 
      4        <em>Constraints:</em>
 
- (4.1)             — <tt>remove_cvref_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt>, and
+ (4.1)            — <tt>remove_cvref_t&lt;F&gt;</tt> is not the same type as <tt>any_invocable</tt>, and
 
- (4.2)             — <tt>remove_cvref_t&lt;F&gt;</tt> is not a specialization of <tt>in_place_type_t</tt>, and
+ (4.2)            — <tt>remove_cvref_t&lt;F&gt;</tt> is not a specialization of <tt>in_place_type_t</tt>, and
 
- (4.3)             — <tt>is_constructible_v&lt;VT, F&gt;</tt> is <tt>true</tt>, and
+ (4.3)            — <tt>is_constructible_v&lt;VT, F&gt;</tt> is <tt>true</tt>, and
 
- (4.4)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
-
- (4.5)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+ (4.4)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
      5        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
@@ -1771,19 +1790,18 @@ with the exceptions of the following:
 
      6        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt> if any of the following hold:
 
- (6.1)             — <tt>f</tt> is a null function pointer value, or
+ (6.1)            — <tt>f</tt> is a null function pointer value, or
 
- (6.2)             — <tt>f</tt> is a null member pointer value, or
+ (6.2)            — <tt>f</tt> is a null member pointer value, or
 
- (6.3)             — <tt>remove_cvref_t&lt;F&gt;</tt> is a specialization of the <tt>any_invocable</tt> class template,
+ (6.3)            — <tt>remove_cvref_t&lt;F&gt;</tt> is a specialization of the <tt>any_invocable</tt> class template,
                      and <tt>!f</tt> is <tt>true</tt>.
 
-     7        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt> with direct-non-list-initialization
+     7        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized with
               <tt>std::forward&lt;F&gt;(f)</tt>.
 
-     8        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+     8        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>template&lt;class T, class... Args&gt;
             explicit any_invocable(in_place_type_t&lt;T&gt;, Args&amp;&amp;... args);</tt>
@@ -1794,9 +1812,7 @@ with the exceptions of the following:
 
 (10.1)            — <tt>is_constructible_v&lt;VT, Args...&gt;</tt> is <tt>true</tt>, and
 
-(10.2)            — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
-
-(10.3)            — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+(10.2)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
     11        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
 
@@ -1804,70 +1820,66 @@ with the exceptions of the following:
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-    13        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized with
-              <tt>std::forward&lt;Args&gt;(args)...</tt> by direct-non-list-initialization.
+    13        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized with
+              <tt>std::forward&lt;Args&gt;(args)...</tt>.
 
-    13        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+    14        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>template&lt;class T, class U, class... Args&gt;
             explicit any_invocable(in_place_type_t&lt;T&gt;, initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args);</tt>
 
-    14        Let <tt>VT</tt> be <tt>decay_t&lt;T&gt;</tt>.
+    15        Let <tt>VT</tt> be <tt>decay_t&lt;T&gt;</tt>.
 
-    15        <em>Constraints:</em>
+    16        <em>Constraints:</em>
 
-(15.1)             — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, ArgTypes...&gt;</tt> is <tt>true</tt>, and
+(16.1)            — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, ArgTypes...&gt;</tt> is <tt>true</tt>, and
 
-(15.2)             — <tt>is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>, and
+(16.2)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
-(15.3)             — <tt>!<i>noex</i> || is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt> is <tt>true</tt>.
+    17        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
 
-    16        <em>Mandates:</em> <tt>VT</tt> is the same type as <tt>T</tt>.
-
-    17        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
+    18        <em>Preconditions:</em> <tt>VT</tt> meets the <i>Cpp17Destructible</i> requirements, and if
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-    18        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> initialized
-              with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt> by direct-non-list-initialization.
+    19        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt> direct-non-list-initialized
+              with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt>.
 
-    19        <em>Throws:</em> Does not throw exceptions when <tt>VT</tt> is a function pointer or a
-              <tt>reference_wrapper&lt;T&gt;</tt> for some <tt>T</tt>. Otherwise, may throw <tt>bad_alloc</tt> or any exception
-              thrown by the expression <tt>VT(std::forward&lt;F&gt;(f))</tt>.
+    20        <em>Throws:</em> Any exception thrown by the initialization of the target object. May throw <tt>bad_alloc</tt>
+              unless <tt>VT</tt> is a function pointer or a specialization of <tt>reference_wrapper</tt>.
 
         <tt>any_invocable&amp; operator=(any_invocable&amp;&amp; f);</tt>
 
-    20        <em>Postconditions:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
+    21        <em>Postconditions:</em> If <tt>!f</tt> is <tt>true</tt>, <tt>*this</tt> has no target; otherwise, the target of <tt>*this</tt>
               is equivalent to the target of <tt>f</tt> before the construction, and <tt>f</tt> is in a
               valid state with an unspecified value.
 
-    21        <em>Returns:</em> <tt>*this</tt>.
+    22        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>any_invocable&amp; operator=(nullptr_t) noexcept;</tt>
 
-    22        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    23        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
 
-    23        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt>.
+    24        <em>Postconditions:</em> <tt>!*this</tt> is <tt>true</tt>.
 
-    24        <em>Returns:</em> <tt>*this</tt>.
+    25        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp; f);</tt>
 
-    25        <em>Effects:</em> Equivalent to:<tt>
+    26        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(std::forward&lt;F&gt;(f)).swap(*this);
                      return *this;</tt>
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(reference_wrapper&lt;F&gt; f) noexcept;</tt>
 
-    26        <em>Effects:</em> Equivalent to:<tt>
+    27        <em>Effects:</em> Equivalent to:<tt>
                      any_invocable(f).swap(*this);
                      return *this;</tt>
 
         <tt>~any_invocable()</tt>;
 
-    27        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>this</tt>.
+    28        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
 
          <b>SECTION.4  Invocation                                                   [inv.inv]</b>
 
@@ -1880,7 +1892,7 @@ with the exceptions of the following:
      2        <em>Preconditions:</em> <tt>bool(*this)</tt> is <tt>true</tt>.
 
      3        <em>Effects:</em> Equivalent to:
-              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F <i>inv-quals</i>&gt;(f), std​::​forward&lt;ArgTypes&gt;(args)...);</tt>
+              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std​::​forward&lt;ArgTypes&gt;(args)...);</tt>
               where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> has type <tt>F</tt>.
 
          <b>SECTION.5  Utility                                                    [inv.util]</b>
@@ -1889,42 +1901,42 @@ with the exceptions of the following:
 
      1        <em>Effects:</em> Exchanges the values of <tt>*this</tt> and <tt>other</tt>.
 
-        <tt>void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
+        <tt>friend void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
      2        <em>Effects</em>: Equivalent to: <tt>f1.swap(f2)</tt>.
 
-        <tt>bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
+        <tt>friend bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
 
      3        <em>Returns:</em> <tt>!f</tt>.
 
 </pre>
-    </blockquote>
-    <h2 class="heading settled" data-level="4" id="SD2018"><span class="secno">4. </span><span class="content">Polls from LEWG San Diego Review (2018)</span><a class="self-link" href="#SD2018"></a></h2>
-    <h3 class="heading settled" data-level="4.1" id="support-func-func-const-func"><span class="secno">4.1. </span><span class="content">Support func(), func() const, func() &amp;&amp;</span><a class="self-link" href="#support-func-func-const-func"></a></h3>
+   </blockquote>
+   <h2 class="heading settled" data-level="4" id="SD2018"><span class="secno">4. </span><span class="content">Polls from LEWG San Diego Review (2018)</span><a class="self-link" href="#SD2018"></a></h2>
+   <h3 class="heading settled" data-level="4.1" id="support-func-func-const-func"><span class="secno">4.1. </span><span class="content">Support func(), func() const, func() &amp;&amp;</span><a class="self-link" href="#support-func-func-const-func"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">6</c->  <c- mi="">6</c-> <c- mi="">2</c-> <c- mi="">1</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="4.2" id="support-func--only"><span class="secno">4.2. </span><span class="content">Support func() &amp;&amp; only</span><a class="self-link" href="#support-func--only"></a></h3>
+   <h3 class="heading settled" data-level="4.2" id="support-func--only"><span class="secno">4.2. </span><span class="content">Support func() &amp;&amp; only</span><a class="self-link" href="#support-func--only"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">2</c->  <c- mi="">2</c-> <c- mi="">7</c-> <c- mi="">1</c-> <c- mi="">1</c->
 </pre>
-    <h3 class="heading settled" data-level="4.3" id="remove-target-target_type"><span class="secno">4.3. </span><span class="content">Remove target/target_type</span><a class="self-link" href="#remove-target-target_type"></a></h3>
+   <h3 class="heading settled" data-level="4.3" id="remove-target-target_type"><span class="secno">4.3. </span><span class="content">Remove target/target_type</span><a class="self-link" href="#remove-target-target_type"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">12</c-> <c- mi="">5</c-> <c- mi="">0</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="4.4" id="require-more-stuff-noexcept-const"><span class="secno">4.4. </span><span class="content">Require more stuff (noexcept, const&amp;&amp;, ...)</span><a class="self-link" href="#require-more-stuff-noexcept-const"></a></h3>
+   <h3 class="heading settled" data-level="4.4" id="require-more-stuff-noexcept-const"><span class="secno">4.4. </span><span class="content">Require more stuff (noexcept, const&amp;&amp;, ...)</span><a class="self-link" href="#require-more-stuff-noexcept-const"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">0</c->  <c- mi="">1</c-> <c- mi="">8</c-> <c- mi="">6</c-> <c- mi="">0</c->
 </pre>
-    <p>Note that the final poll (require more stuff) was not due to members being
+   <p>Note that the final poll (require more stuff) was not due to members being
 against the design, but because we could easily add those facilities in a later
 standard without any breakage.</p>
-    <h3 class="heading settled" data-level="4.5" id="name-options"><span class="secno">4.5. </span><span class="content">Name Options</span><a class="self-link" href="#name-options"></a></h3>
-    <p>
-     There was one final poll, which brought us to the name 
-     <tt>any_invocable</tt>
-     .
-    </p>
+   <h3 class="heading settled" data-level="4.5" id="name-options"><span class="secno">4.5. </span><span class="content">Name Options</span><a class="self-link" href="#name-options"></a></h3>
+   <p>
+    There was one final poll, which brought us to the name 
+    <tt>any_invocable</tt>
+    .
+   </p>
 <pre class="highlight"><c- mi="">3</c->  <c- n="">unique_function</c->
 <c- mi="">3</c->  <c- n="">move_function</c->
 <c- mi="">2</c->  <c- n="">move_only_function</c->
@@ -1939,87 +1951,85 @@ standard without any breakage.</p>
 <c- mi="">0</c->  <c- n="">callable</c->
 <c- mi="">2</c->  <c- n="">any_function</c->
 </pre>
-    <h2 class="heading settled" data-level="5" id="K2019"><span class="secno">5. </span><span class="content">Polls from LEWG Kona Review (2019)</span><a class="self-link" href="#K2019"></a></h2>
-    <h3 class="heading settled" data-level="5.1" id="we-want-to-spend-time-on-this-now-in-order-to-include-it-in-c20"><span class="secno">5.1. </span><span class="content">We want to spend time on this now in order to include it in C++20</span><a class="self-link" href="#we-want-to-spend-time-on-this-now-in-order-to-include-it-in-c20"></a></h3>
+   <h2 class="heading settled" data-level="5" id="K2019"><span class="secno">5. </span><span class="content">Polls from LEWG Kona Review (2019)</span><a class="self-link" href="#K2019"></a></h2>
+   <h3 class="heading settled" data-level="5.1" id="we-want-to-spend-time-on-this-now-in-order-to-include-it-in-c20"><span class="secno">5.1. </span><span class="content">We want to spend time on this now in order to include it in C++20</span><a class="self-link" href="#we-want-to-spend-time-on-this-now-in-order-to-include-it-in-c20"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">8</c->  <c- mi="">8</c-> <c- mi="">2</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="5.2" id="add-support-for-func-const-and-func"><span class="secno">5.2. </span><span class="content">Add support for func() const&amp; and func()&amp;</span><a class="self-link" href="#add-support-for-func-const-and-func"></a></h3>
+   <h3 class="heading settled" data-level="5.2" id="add-support-for-func-const-and-func"><span class="secno">5.2. </span><span class="content">Add support for func() const&amp; and func()&amp;</span><a class="self-link" href="#add-support-for-func-const-and-func"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">0</c->  <c- mi="">8</c-> <c- mi="">7</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="5.3" id="add-support-for-func-noexcept-x-all-of-the-above"><span class="secno">5.3. </span><span class="content">Add support for func() noexcept (x all of the above)</span><a class="self-link" href="#add-support-for-func-noexcept-x-all-of-the-above"></a></h3>
+   <h3 class="heading settled" data-level="5.3" id="add-support-for-func-noexcept-x-all-of-the-above"><span class="secno">5.3. </span><span class="content">Add support for func() noexcept (x all of the above)</span><a class="self-link" href="#add-support-for-func-noexcept-x-all-of-the-above"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c->  <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">2</c->  <c- mi="">12</c-> <c- mi="">2</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="5.4" id="include-the-option-for-ctad"><span class="secno">5.4. </span><span class="content">Include the option for CTAD</span><a class="self-link" href="#include-the-option-for-ctad"></a></h3>
+   <h3 class="heading settled" data-level="5.4" id="include-the-option-for-ctad"><span class="secno">5.4. </span><span class="content">Include the option for CTAD</span><a class="self-link" href="#include-the-option-for-ctad"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">0</c->  <c- mi="">1</c-> <c- mi="">5</c-> <c- mi="">9</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="5.5" id="name-callable-vs-any-invocable"><span class="secno">5.5. </span><span class="content">Name: callable vs any invocable</span><a class="self-link" href="#name-callable-vs-any-invocable"></a></h3>
+   <h3 class="heading settled" data-level="5.5" id="name-callable-vs-any-invocable"><span class="secno">5.5. </span><span class="content">Name: callable vs any invocable</span><a class="self-link" href="#name-callable-vs-any-invocable"></a></h3>
 <pre class="highlight"><c- n="">SC</c-> <c- n="">C</c-> <c- n="">N</c-> <c- n="">AI</c-> <c- n="">SAI</c->
 <c- mi="">3</c->  <c- mi="">2</c-> <c- mi="">3</c-> <c- mi="">5</c->  <c- mi="">6</c->
 </pre>
-    <h3 class="heading settled" data-level="5.6" id="any_invocable-vs-invocable"><span class="secno">5.6. </span><span class="content">any_invocable vs invocable</span><a class="self-link" href="#any_invocable-vs-invocable"></a></h3>
+   <h3 class="heading settled" data-level="5.6" id="any_invocable-vs-invocable"><span class="secno">5.6. </span><span class="content">any_invocable vs invocable</span><a class="self-link" href="#any_invocable-vs-invocable"></a></h3>
 <pre class="highlight"><c- n="">SAI</c-> <c- n="">AI</c-> <c- n="">N</c-> <c- n="">I</c-> <c- n="">SI</c->
 <c- mi="">3</c->   <c- mi="">7</c->  <c- mi="">2</c-> <c- mi="">5</c-> <c- mi="">1</c->
 </pre>
-    <h3 class="heading settled" data-level="5.7" id="header-choice"><span class="secno">5.7. </span><span class="content">Header choice</span><a class="self-link" href="#header-choice"></a></h3>
+   <h3 class="heading settled" data-level="5.7" id="header-choice"><span class="secno">5.7. </span><span class="content">Header choice</span><a class="self-link" href="#header-choice"></a></h3>
 <pre class="highlight"><c- mi="">7</c-> <c- o="">&lt;</c-><c- n="">functional</c-><c- o="">&gt;</c->
 <c- mi="">11</c-> <c- o="">&lt;</c-><c- n="">any_invocable</c-><c- o="">&gt;</c->
 <c- mi="">11</c-> <c- o="">&lt;</c-><c- n="">invocable</c-><c- o="">&gt;</c->
 <c- mi="">3</c-> <c- o="">&lt;</c-><c- p="">()</c-><c- o="">&gt;</c->
 </pre>
-    <h3 class="heading settled" data-level="5.8" id="can-get-stdfunction-from-any_invocable"><span class="secno">5.8. </span><span class="content">Can get std::function from &lt;any_invocable&gt;</span><a class="self-link" href="#can-get-stdfunction-from-any_invocable"></a></h3>
+   <h3 class="heading settled" data-level="5.8" id="can-get-stdfunction-from-any_invocable"><span class="secno">5.8. </span><span class="content">Can get std::function from &lt;any_invocable&gt;</span><a class="self-link" href="#can-get-stdfunction-from-any_invocable"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">0</c->  <c- mi="">1</c-> <c- mi="">4</c-> <c- mi="">4</c-> <c- mi="">7</c->
 </pre>
-    <h3 class="heading settled" data-level="5.9" id="can-get-stdfunction-from-invocable"><span class="secno">5.9. </span><span class="content">Can get std::function from &lt;invocable&gt;</span><a class="self-link" href="#can-get-stdfunction-from-invocable"></a></h3>
+   <h3 class="heading settled" data-level="5.9" id="can-get-stdfunction-from-invocable"><span class="secno">5.9. </span><span class="content">Can get std::function from &lt;invocable&gt;</span><a class="self-link" href="#can-get-stdfunction-from-invocable"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">1</c->  <c- mi="">3</c-> <c- mi="">6</c-> <c- mi="">3</c-> <c- mi="">2</c->
 </pre>
-    <p>Decide on &lt;any_invocable&gt;. Unanimous for &lt;functional&gt; to pull it in,
+   <p>Decide on &lt;any_invocable&gt;. Unanimous for &lt;functional&gt; to pull it in,
 even if in its own header.</p>
-    <h3 class="heading settled" data-level="5.10" id="remove-the-null-check-in-the-call-operator-and-throwing-of-bad_function_call"><span class="secno">5.10. </span><span class="content">Remove the null-check in the call operator and throwing of bad_function_call</span><a class="self-link" href="#remove-the-null-check-in-the-call-operator-and-throwing-of-bad_function_call"></a></h3>
+   <h3 class="heading settled" data-level="5.10" id="remove-the-null-check-in-the-call-operator-and-throwing-of-bad_function_call"><span class="secno">5.10. </span><span class="content">Remove the null-check in the call operator and throwing of bad_function_call</span><a class="self-link" href="#remove-the-null-check-in-the-call-operator-and-throwing-of-bad_function_call"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">8</c->  <c- mi="">2</c-> <c- mi="">1</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h3 class="heading settled" data-level="5.11" id="remove-the-null-check-in-constructors-that-are-not-nullptr_t"><span class="secno">5.11. </span><span class="content">Remove the null-check in constructors that are not nullptr_t</span><a class="self-link" href="#remove-the-null-check-in-constructors-that-are-not-nullptr_t"></a></h3>
+   <h3 class="heading settled" data-level="5.11" id="remove-the-null-check-in-constructors-that-are-not-nullptr_t"><span class="secno">5.11. </span><span class="content">Remove the null-check in constructors that are not nullptr_t</span><a class="self-link" href="#remove-the-null-check-in-constructors-that-are-not-nullptr_t"></a></h3>
 <pre class="highlight"><c- n="">std</c-><c- o="">::</c-><c- n="">any_callable</c-><voidu00028voidu00029> <c- n="">ac</c-> <c- o="">=</c-> <c- n="">my_ptr_object</c-><c- p="">;</c->
 <c- k="">if</c-><c- p="">(</c-><c- n="">ac</c-><c- p="">)</c->  <c- p="">{</c-> <c- d="">/* true even if my_ptr is nullptr */</c-> <c- p="">}</c->
 </voidu00028voidu00029></pre>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">0</c->  <c- mi="">2</c-> <c- mi="">2</c-> <c- mi="">4</c-> <c- mi="">3</c->
 </pre>
-    <h3 class="heading settled" data-level="5.12" id="perfect-forwarding-for-converting-constructor-instead-of-by-value"><span class="secno">5.12. </span><span class="content">Perfect forwarding for converting constructor instead of by-value</span><a class="self-link" href="#perfect-forwarding-for-converting-constructor-instead-of-by-value"></a></h3>
-    <p>Unanimous</p>
-    <h3 class="heading settled" data-level="5.13" id="forward-to-lwg-for-c20"><span class="secno">5.13. </span><span class="content">Forward to LWG for C++20</span><a class="self-link" href="#forward-to-lwg-for-c20"></a></h3>
+   <h3 class="heading settled" data-level="5.12" id="perfect-forwarding-for-converting-constructor-instead-of-by-value"><span class="secno">5.12. </span><span class="content">Perfect forwarding for converting constructor instead of by-value</span><a class="self-link" href="#perfect-forwarding-for-converting-constructor-instead-of-by-value"></a></h3>
+   <p>Unanimous</p>
+   <h3 class="heading settled" data-level="5.13" id="forward-to-lwg-for-c20"><span class="secno">5.13. </span><span class="content">Forward to LWG for C++20</span><a class="self-link" href="#forward-to-lwg-for-c20"></a></h3>
 <pre class="highlight"><c- n="">SF</c-> <c- n="">F</c-> <c- n="">N</c-> <c- n="">A</c-> <c- n="">SA</c->
 <c- mi="">8</c->  <c- mi="">5</c-> <c- mi="">0</c-> <c- mi="">0</c-> <c- mi="">0</c->
 </pre>
-    <h2 class="heading settled" data-level="6" id="Impl"><span class="secno">6. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
-    <p>
-     There are many implementations of a move-only 
-     <tt>std::function</tt>
-      with a
+   <h2 class="heading settled" data-level="6" id="Impl"><span class="secno">6. </span><span class="content">Implementation Experience</span><a class="self-link" href="#Impl"></a></h2>
+   <p>
+    There are many implementations of a move-only 
+    <tt>std::function</tt>
+     with a
 design that is similar to this. What is presented is a conservative subset of
 those implementations. The changes suggested in LEWG, though minimal, have not
 been used in a large codebase.
-    </p>
-    <p>Previous revisions of this paper have included publicly accessible move-only
+   </p>
+   <p>Previous revisions of this paper have included publicly accessible move-only
 function implementations, notably including implementations in HPX, Folly, and
 LLVM.</p>
-    <h2 class="heading settled" data-level="7" id="Ack"><span class="secno">7. </span><span class="content">Acknowledgments</span><a class="self-link" href="#Ack"></a></h2>
-    <p>Thanks to Tomasz Kamiński, Tim Song, and Nevin Liber for suggestions on wording simplifications.</p>
-    <h2 class="heading settled" data-level="8" id="References"><span class="secno">8. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
-    <p>[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a></p>
-    <p>[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a></p>
-    <p>[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a></p>
-    <p>[4]: Geoffrey Romer: N4348 "Making std::function safe for concurrency" <a href="https://api.csswg.org/bikeshed/www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html">www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html</a></p>
-    <p>[5]: Richard Smith: N4820 "Working Draft, Standard for Programming Language C++" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf</a></p>
-   </tt>
+   <h2 class="heading settled" data-level="7" id="Ack"><span class="secno">7. </span><span class="content">Acknowledgments</span><a class="self-link" href="#Ack"></a></h2>
+   <p>Thanks to Tomasz Kamiński, Tim Song, and Nevin Liber for suggestions on wording simplifications.</p>
+   <h2 class="heading settled" data-level="8" id="References"><span class="secno">8. </span><span class="content">References</span><a class="self-link" href="#References"></a></h2>
+   <p>[1]: David Krauss: N4543 "A polymorphic wrapper for all Callable objects" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf</a></p>
+   <p>[2]: Geoffrey Romer: "Bug 34 - Need type-erased wrappers for move-only callable objects" <a href="https://issues.isocpp.org/show_bug.cgi?id=34">https://issues.isocpp.org/show_bug.cgi?id=34</a></p>
+   <p>[3]: Ryan McDougall: P0288R2 "The Need for std::unique_function" <a href="https://wg21.link/p0288r2">https://wg21.link/p0288r2</a></p>
+   <p>[4]: Geoffrey Romer: N4348 "Making std::function safe for concurrency" <a href="https://api.csswg.org/bikeshed/www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html">www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4348.html</a></p>
+   <p>[5]: Richard Smith: N4820 "Working Draft, Standard for Programming Language C++" <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf</a></p>
   </main>
-  <tt>
 <script>
 (function() {
   "use strict";
@@ -2148,5 +2158,4 @@ LLVM.</p>
   }
 
 })();
-</script>
-  </tt></body></html>
+</script></body></html>
