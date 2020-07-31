@@ -1745,7 +1745,7 @@ with the exceptions of the following:
               static constexper bool is-callable-from = see below; // exposition-only</tt>
 
      1  If <tt><i>noex</i></tt> is true, <tt>is-callable-from&lt;VT&gt;</tt> is equal to <tt>is_nothrow_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; 
-            &amp;&amp; is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>.  Otherwise, <tt>is-callable-from&lt;VT&gt;</tt>
+            &amp;&amp; is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>. Otherwise, <tt>is-callable-from&lt;VT&gt;</tt>
         is equal to <tt>is_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp; is_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>
 
         <tt>any_invocable() noexcept;</tt>
@@ -1867,7 +1867,7 @@ with the exceptions of the following:
 
         <tt>~any_invocable()</tt>;
 
-    31        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
+    31        <em>Effects:</em> If <tt>*this</tt> has a target, it is destroyed.
 
          <b>SECTION.4  Invocation                                              [inv.inv]</b>
 
@@ -1880,14 +1880,14 @@ with the exceptions of the following:
      2        <em>Preconditions:</em> <tt>*this</tt> has a target.
 
      3        <em>Effects:</em> Equivalent to:
-              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std​::​forward&lt;ArgTypes&gt;(args)...);</tt>
+              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std::forward&lt;ArgTypes&gt;(args)...);</tt>
               where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> has type lvalue of type <tt>F</tt>.
 
          <b>SECTION.5  Utility                                                 [inv.util]</b>
 
         <tt>void swap(any_invocable&amp; other) noexcept;</tt>
 
-     1        <em>Effects:</em> Exchanges the values of <tt>*this</tt> and <tt>other</tt>.
+     1        <em>Effects:</em> Exchanges the targets of <tt>*this</tt> and <tt>other</tt>.
 
         <tt>friend void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
