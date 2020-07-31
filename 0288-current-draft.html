@@ -1506,7 +1506,7 @@ c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
   <div class="head">
    <p data-fill-with="logo"></p>
    <h1 class="p-name no-ref" id="title">D0288R6<br>any_invocable</h1>
-   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2020-07-14">2020-07-14</time></span></h2>
+   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2020-07-31">2020-07-31</time></span></h2>
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
@@ -1723,7 +1723,7 @@ with the exceptions of the following:
 
             private:
               template&lt;class VT&gt;
-                static constexper bool is-callable-from = see below; // exposition-only
+                static constexpr bool is-callable-from = see below; // exposition-only
             };
           }</tt>
 
@@ -1742,20 +1742,23 @@ with the exceptions of the following:
         <b>SECTION.3  Constructors and destructor                              [inv.con]</b>
 
         <tt>template&lt;class VT&gt;
-              static constexper bool is-callable-from = see below; // exposition-only</tt>
+              static constexpr bool is-callable-from = see below; // exposition-only</tt>
 
-     1  If <tt><i>noex</i></tt> is true, <tt>is-callable-from&lt;VT&gt;</tt> is equal to <tt>is_nothrow_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; 
-            &amp;&amp; is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>. Otherwise, <tt>is-callable-from&lt;VT&gt;</tt>
-        is equal to <tt>is_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp; is_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>
+     1  If <tt><i>noex</i></tt> is true, <tt>is-callable-from&lt;VT&gt;</tt> is equal to
+          <tt>is_nothrow_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp;
+            is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>.
+        Otherwise, <tt>is-callable-from&lt;VT&gt;</tt> is equal to
+          <tt>is_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp;
+            is_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>.
 
         <tt>any_invocable() noexcept;</tt>
         <tt>any_invocable(nullptr_t) noexcept;</tt>
 
-     2        <em>Postconditions:</em> <tt>*this</tt> has no target.
+     2        <em>Postconditions:</em> <tt>*this</tt> has no target object.
  
         <tt>any_invocable(any_invocable&amp;&amp; f) noexcept;</tt>
  
-     3        <em>Postconditions:</em> The target of <tt>*this</tt> is the target <tt>f</tt> had before
+     3        <em>Postconditions:</em> The target object of <tt>*this</tt> is the target object <tt>f</tt> had before
               construction, and <tt>f</tt> is in a valid state with an unspecified value.
 
         <tt>template&lt;class F&gt; any_invocable(F&amp;&amp; f);</tt>
@@ -1776,14 +1779,14 @@ with the exceptions of the following:
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-     7        <em>Postconditions:</em> <tt>*this</tt> has a target unless any of the following hold:
+     7        <em>Postconditions:</em> <tt>*this</tt> has a target object unless any of the following hold:
 
  (7.1)            — <tt>f</tt> is a null function pointer value, or
 
  (7.2)            — <tt>f</tt> is a null member pointer value, or
 
  (7.3)            — <tt>remove_cvref_t&lt;F&gt;</tt> is a specialization of the <tt>any_invocable</tt> class template,
-                     and <tt>f</tt> has no target.
+                     and <tt>f</tt> has no target object.
 
      8        Otherwise, <tt>*this</tt> targets an object of type <tt>VT</tt>
               direct-non-list-initialized with <tt>std::forward&lt;F&gt;(f)</tt>.
@@ -1844,44 +1847,38 @@ with the exceptions of the following:
 
     22        <em>Effects:</em> Equivalent to: <tt>any_invocable(std::move(f)).swap(*this);</tt>
 
-    23        <em>Postconditions:</em> <tt>*this</tt> has a target if <tt>f</tt> had a target before assignment.
-
-    24        <em>Returns:</em> <tt>*this</tt>.
+    23        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>any_invocable&amp; operator=(nullptr_t) noexcept;</tt>
 
-    25        <em>Effects:</em> If <tt>*this != nullptr</tt> is <tt>true</tt>, destroys the target object of <tt>*this</tt>.
+    24        <em>Effects:</em> Destroys the target object of <tt>*this</tt>, if any.
 
-    26        <em>Postconditions:</em> <tt>*this</tt> has no target.
-
-    27        <em>Returns:</em> <tt>*this</tt>.
+    25        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp; f);</tt>
 
-    28        <em>Effects:</em> Equivalent to: <tt>any_invocable(std::forward&lt;F&gt;(f)).swap(*this);</tt>
+    26        <em>Effects:</em> Equivalent to: <tt>any_invocable(std::forward&lt;F&gt;(f)).swap(*this);</tt>
 
-    29        <em>Postconditions:</em> <tt>*this</tt> has a target if <tt>f</tt> had a target before assignment.
-
-    30        <em>Returns:</em> <tt>*this</tt>.
+    27        <em>Returns:</em> <tt>*this</tt>.
 
 
         <tt>~any_invocable()</tt>;
 
-    31        <em>Effects:</em> If <tt>*this</tt> has a target, it is destroyed.
+    28        <em>Effects:</em> Destroys the target object of <tt>*this</tt>, if any.
 
          <b>SECTION.4  Invocation                                              [inv.inv]</b>
 
         <tt>explicit operator bool() const noexcept;</tt>
 
-     1        <em>Returns:</em> <tt>true</tt> if <tt>*this</tt> has a target, otherwise <tt>false</tt>.
+     1        <em>Returns:</em> <tt>true</tt> if <tt>*this</tt> has a target object, otherwise <tt>false</tt>.
 
         <tt>R operator()(ArgTypes... args) <i>cv</i> <i>ref</i> noexcept(<i>noex</i>);</tt>
 
-     2        <em>Preconditions:</em> <tt>*this</tt> has a target.
+     2        <em>Preconditions:</em> <tt>*this</tt> has a target object.
 
      3        <em>Effects:</em> Equivalent to:
               <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std::forward&lt;ArgTypes&gt;(args)...);</tt>
-              where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> has type lvalue of type <tt>F</tt>.
+              where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> is lvalue of type <tt>F</tt>.
 
          <b>SECTION.5  Utility                                                 [inv.util]</b>
 
@@ -1895,7 +1892,7 @@ with the exceptions of the following:
 
         <tt>friend bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
 
-     3        <em>Returns:</em> <tt>true</tt> if <tt>f</tt> has no target.
+     3        <em>Returns:</em> <tt>true</tt> if <tt>f</tt> has no target object.
 
 </pre>
    </blockquote>
