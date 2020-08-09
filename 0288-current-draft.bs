@@ -170,11 +170,11 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
               static constexpr bool is-callable-from = see below; // exposition-only</tt>
 
      1  If <tt><i>noex</i></tt> is true, <tt>is-callable-from&lt;VT&gt;</tt> is equal to
-          <tt>is_nothrow_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp;
-            is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>.
+          <tt>is_nothrow_invocable_r_v&lt;R, VT <i>cv ref</i>, ArgTypes...&gt; &amp;&amp;
+             is_nothrow_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgTypes...&gt;</tt>.
         Otherwise, <tt>is-callable-from&lt;VT&gt;</tt> is equal to
-          <tt>is_invocable_r_v&lt;R, VT <i>cv ref</i>, Args...&gt; &amp;&amp;
-            is_invocable_r_v&lt;R, VT <i>inv-quals</i>, Args...&gt;</tt>.
+          <tt>is_invocable_r_v&lt;R, VT <i>cv ref</i>, ArgTypes...&gt; &amp;&amp;
+             is_invocable_r_v&lt;R, VT <i>inv-quals</i>, ArgsTypes...&gt;</tt>.
 
         <tt>any_invocable() noexcept;</tt>
         <tt>any_invocable(nullptr_t) noexcept;</tt>
@@ -183,8 +183,9 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
  
         <tt>any_invocable(any_invocable&amp;&amp; f) noexcept;</tt>
  
-     3        <em>Postconditions:</em> The target object of <tt>*this</tt> is the target object <tt>f</tt> had before
-              construction, and <tt>f</tt> is in a valid state with an unspecified value.
+     3        <em>Postconditions:</em> The target object of <tt>*this</tt> is equivalent to the target
+              object <tt>f</tt> had before construction, if any, and <tt>f</tt> is in a valid state with
+              an unspecified value.
 
         <tt>template&lt;class F&gt; any_invocable(F&amp;&amp; f);</tt>
 
@@ -204,7 +205,8 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
               <tt>is_move_constructible_v&lt;VT&gt;</tt> is <tt>true</tt>, <tt>VT</tt> meets the <i>Cpp17MoveConstructible</i>
               requirements.
 
-     7        <em>Postconditions:</em> <tt>*this</tt> has a target object unless any of the following hold:
+     7        <em>Postconditions:</em> <tt>*this</tt> does not have a target object if any of the following
+              hold:
 
  (7.1)            — <tt>f</tt> is a null function pointer value, or
 
@@ -251,7 +253,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
     17        <em>Constraints:</em>
 
-(17.1)            — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, ArgTypes...&gt;</tt> is <tt>true</tt>, and
+(17.1)            — <tt>is_constructible_v&lt;VT, initializer_list&lt;U&gt;&amp;, Args...&gt;</tt> is <tt>true</tt>, and
 
 (17.2)            — <tt>is-callable-from&lt;VT&gt;</tt> is <tt>true</tt>.
 
@@ -262,7 +264,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
               requirements.
 
     20        <em>Postconditions:</em> <tt>*this</tt> targets an object of type <tt>VT</tt>
-              direct-non-list-initialized with <tt>ilist, std::forward&lt;ArgTypes&gt;(args)...</tt>.
+              direct-non-list-initialized with <tt>ilist, std::forward&lt;Args&gt;(args)...</tt>.
 
     21        <em>Throws:</em> Any exception thrown by the initialization of the target object.
               May throw <tt>bad_alloc</tt> unless <tt>VT</tt> is a function pointer or a specialization of
@@ -278,7 +280,9 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
     24        <em>Effects:</em> Destroys the target object of <tt>*this</tt>, if any.
 
-    25        <em>Returns:</em> <tt>*this</tt>.
+    25        <em>Postconditions:</em> <tt>*this</tt> has no target object.
+
+    26        <em>Returns:</em> <tt>*this</tt>.
 
         <tt>template&lt;class F&gt; any_invocable&amp; operator=(F&amp;&amp; f);</tt>
 
@@ -309,7 +313,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
         <tt>void swap(any_invocable&amp; other) noexcept;</tt>
 
-     1        <em>Effects:</em> Exchanges the targets of <tt>*this</tt> and <tt>other</tt>.
+     1        <em>Effects:</em> Exchanges the values of <tt>*this</tt> and <tt>other</tt>.
 
         <tt>friend void swap(any_invocable&amp; f1, any_invocable&amp; f2) noexcept;</tt>
 
@@ -317,7 +321,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
 
         <tt>friend bool operator==(const any_invocable&amp; f, nullptr_t) noexcept;</tt>
 
-     3        <em>Returns:</em> <tt>true</tt> if <tt>f</tt> has no target object.
+     3        <em>Returns:</em> <tt>true</tt> if <tt>f</tt> has no target object, otherwise false.
 
 </pre>
 </blockquote>
