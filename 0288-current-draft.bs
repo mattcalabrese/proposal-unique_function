@@ -1,7 +1,7 @@
 <pre class='metadata'>
 Title: any_invocable
 Shortname: D0288
-Revision: 6
+Revision: 7
 Status: D
 Audience: LWG
 Group: WG21
@@ -306,7 +306,7 @@ Insert the following section at the end of <b>Function Objects</b> [function.obj
      2        <em>Preconditions:</em> <tt>*this</tt> has a target object.
 
      3        <em>Effects:</em> Equivalent to:
-              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F &amp;&gt;(f), std::forward&lt;ArgTypes&gt;(args)...);</tt>
+              <tt>return INVOKE&lt;R&gt;(static_cast&lt;F <i>inv-quals</i>&gt;(f), std::forward&lt;ArgTypes&gt;(args)...);</tt>
               where <tt>f</tt> is the target object of <tt>*this</tt> and <tt>f</tt> is lvalue of type <tt>F</tt>.
 
          <b>SECTION.5  Utility                                                 [inv.util]</b>
